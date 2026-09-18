@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.TRSolution.trsIbp.authority.mapper.AuthorityMapper">
+
+    <select id="selectAuthorityList" resultType="hashmap">
+        SELECT A.AUTHRT_ID AS authrtId,
+               A.AUTHRT_NM AS authrtNm,
+               A.AUTHRT_EXPLN AS authrtExpln,
+               A.SORT_SEQ AS sortSeq,
+               (SELECT COUNT(*) FROM user_info U
+                 WHERE U.AUTHRT_ID = A.AUTHRT_ID AND U.USE_YN = 'Y') AS userCount
+        FROM authrt_info A
+        WHERE IFNULL(A.USE_YN, 'Y') = 'Y'
+        ORDER BY A.SORT_SEQ, A.AUTHRT_ID
+    </select>
+
+    <select id="selectMenuAuthorityList" parameterType="map" resultType="hashmap">
+        SELECT M.MENU_SN AS menuSn,
+               M.MENU_CD AS menuCd,
+               M.WORKSPC_ID AS workspcId,
+               W.WORKSPC_NM AS workspcNm,
+               M.UP_MENU_SN AS upMenuSn,
+               M.MENU_NM AS menuNm,
+               M.MENU_URL_ADDR AS menuUrlAddr,
+               M.MENU_TYPE_NM AS menuTypeNm,
+               M.MENU_ICON_NM AS menuIconNm,
+               M.MENU_LV AS menuLv,
+               M.MENU_SORT_SEQ AS menuSortSeq,
+               CASE WHEN R.AUTHRT_GRNT_YN = 'Y' THEN 'Y' ELSE 'N' END AS authrtGrntYn
+        FROM menu_info M
+        JOIN workspc_info W ON W.WORKSPC_ID = M.WORKSPC_ID AND W.USE_YN = 'Y'
+        LEFT JOIN authrt_menu_rel R
+          ON R.MENU_SN = M.MENU_SN
+         AND R.AUTHRT_ID = #{authrtId}
+         AND R.AUTHRT_GRNT_YN = 'Y'
+        WHERE M.MENU_USE_YN = 'Y'
+        ORDER BY W.SORT_SEQ, M.MENU_SORT_SEQ, M.MENU_SN
+    </select>
+
+    <select id="selectGrantedMenuCodeList" parameterType="string" resultType="string">
+        SELECT M.MENU_CD
+        FROM authrt_menu_rel R
+        JOIN menu_info M ON M.MENU_SN = R.MENU_SN
+        WHERE R.AUTHRT_ID = #{value}
+          AND R.AUTHRT_GRNT_YN = 'Y'
+          AND M.MENU_USE_YN = 'Y'
+    </select>
+
+    <select id="selectGrantedMenuUrlList" parameterType="string" resultType="string">
+        SELECT DISTINCT M.MENU_URL_ADDR
+        FROM authrt_menu_rel R
+        JOIN menu_info M ON M.MENU_SN = R.MENU_SN
+        WHERE R.AUTHRT_ID = #{value}
+          AND R.AUTHRT_GRNT_YN = 'Y'
+          AND M.MENU_USE_YN = 'Y'
+          AND M.MENU_URL_ADDR IS NOT NULL
+    </select>
+
+    <select id="selectAllowedWorkspaceList" parameterType="string" resultType="string">
+        SELECT DISTINCT M.WORKSPC_ID
+        FROM authrt_menu_rel R
+        JOIN menu_info M ON M.MENU_SN = R.MENU_SN
+        JOIN workspc_info W ON W.WORKSPC_ID = M.WORKSPC_ID
+        WHERE R.AUTHRT_ID = #{value}
+          AND R.AUTHRT_GRNT_YN = 'Y'
+          AND M.MENU_USE_YN = 'Y'
+          AND M.MENU_CD LIKE '%_DASHBOARD_SCREEN'
+          AND W.USE_YN = 'Y'
+        ORDER BY M.WORKSPC_ID
+    </select>
+
+    <select id="selectDefaultWorkspace" parameterType="string" resultType="string">
+        SELECT WORKSPC_ID
+        FROM user_workspc_rel
+        WHERE USER_ID = #{value}
+          AND DFLT_YN = 'Y'
+          AND USE_YN = 'Y'
+        LIMIT 1
+    </select>
+
+    <select id="selectRegisteredMenuCount" parameterType="map" resultType="int">
+        SELECT COUNT(*)
+        FROM menu_info
+        WHERE MENU_URL_ADDR = #{requestUrl}
+          AND MENU_TYPE_NM = #{menuTypeNm}
+          AND MENU_USE_YN = 'Y'
+          AND AUTHRT_CHK_YN = 'Y'
+    </select>
+
+    <select id="selectGrantedMenuCount" parameterType="map" resultType="int">
+        SELECT COUNT(*)
+        FROM authrt_menu_rel R
+        JOIN menu_info M ON M.MENU_SN = R.MENU_SN
+        WHERE R.AUTHRT_ID = #{authrtId}
+          AND R.AUTHRT_GRNT_YN = 'Y'
+          AND M.MENU_URL_ADDR = #{requestUrl}
+          AND M.MENU_TYPE_NM = #{menuTypeNm}
+          AND M.MENU_USE_YN = 'Y'
+    </select>
+
+    <select id="selectAuthorityCount" parameterType="string" resultType="int">
+        SELECT COUNT(*) FROM authrt_info WHERE AUTHRT_ID = #{value}
+    </select>
+
+    <select id="selectAuthorityUserCount" parameterType="string" resultType="int">
+        SELECT COUNT(*) FROM user_info WHERE AUTHRT_ID = #{value}
+    </select>
+
+    <select id="selectBizAccessCount" parameterType="map" resultType="int">
+        SELECT COUNT(*)
+        FROM biz_info B
+        WHERE B.BIZ_ID = #{bizId}
+          AND B.CO_ID = #{coId}
+          AND EXISTS (
+              SELECT 1
+              FROM biz_mnpw M
+              WHERE M.BIZ_ID = B.BIZ_ID
+                AND M.USER_ID = #{userId}
+                AND M.USE_YN = 'Y'
+          )
+    </select>
+
+    <select id="selectScheduleAccessCount" parameterType="map" resultType="int">
+        SELECT COUNT(*)
+        FROM schdl_info S
+        WHERE S.SCHDL_SN = #{schdlSn}
+          AND S.CO_ID = #{coId}
+          AND S.USE_YN = 'Y'
+          AND (
+              S.RGTR_ID = #{userId}
+              OR (
+                  #{writeYn} = 'N'
+                  AND EXISTS (
+                      SELECT 1
+                      FROM schdl_user_rel R
+                      WHERE R.SCHDL_SN = S.SCHDL_SN
+                        AND R.USER_ID = #{userId}
+                  )
+              )
+          )
+    </select>
+
+    <insert id="insertAuthority" parameterType="map">
+        INSERT INTO authrt_info
+            (AUTHRT_ID, AUTHRT_NM, AUTHRT_EXPLN, SORT_SEQ, USE_YN, REG_DT)
+        SELECT #{authrtId}, #{authrtNm}, #{authrtExpln}, IFNULL(MAX(SORT_SEQ), 0) + 1, 'Y', NOW()
+        FROM authrt_info
+    </insert>
+
+    <update id="updateAuthority" parameterType="map">
+        UPDATE authrt_info
+        SET AUTHRT_NM = #{authrtNm},
+            AUTHRT_EXPLN = #{authrtExpln},
+            MDFCN_DT = NOW()
+        WHERE AUTHRT_ID = #{authrtId}
+    </update>
+
+    <delete id="deleteAuthorityMenu" parameterType="string">
+        DELETE FROM authrt_menu_rel WHERE AUTHRT_ID = #{value}
+    </delete>
+
+    <delete id="deleteAuthority" parameterType="string">
+        DELETE FROM authrt_info WHERE AUTHRT_ID = #{value}
+    </delete>
+
+    <insert id="insertAuthorityMenu" parameterType="map">
+        INSERT INTO authrt_menu_rel
+            (AUTHRT_ID, MENU_SN, AUTHRT_GRNT_YN, REG_DT, RGTR_ID)
+        VALUES
+            (#{authrtId}, #{menuSn}, 'Y', NOW(), #{loginUserId})
+    </insert>
+
+    <update id="clearDefaultWorkspace" parameterType="string">
+        UPDATE user_workspc_rel
+        SET DFLT_YN = 'N', MDFCN_DT = NOW(), MDFR_ID = #{value}
+        WHERE USER_ID = #{value}
+    </update>
+
+    <insert id="upsertDefaultWorkspace" parameterType="map">
+        INSERT INTO user_workspc_rel
+            (USER_ID, WORKSPC_ID, DFLT_YN, USE_YN, REG_DT, RGTR_ID)
+        VALUES
+            (#{userId}, #{workspaceId}, 'Y', 'Y', NOW(), #{userId})
+        ON DUPLICATE KEY UPDATE
+            DFLT_YN = 'Y',
+            USE_YN = 'Y',
+            MDFCN_DT = NOW(),
+            MDFR_ID = #{userId}
+    </insert>
+</mapper>

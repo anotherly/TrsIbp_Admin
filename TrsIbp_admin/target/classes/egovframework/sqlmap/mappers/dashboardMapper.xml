@@ -1,0 +1,268 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.TRSolution.trsIbp.dashboard.mapper.DashboardMapper">
+
+    <select id="selectWorkSummary" parameterType="map" resultType="hashmap">
+        SELECT
+          (SELECT COUNT(DISTINCT S.SCHDL_SN)
+             FROM schdl_info S
+             JOIN schdl_user_rel R ON R.SCHDL_SN = S.SCHDL_SN
+            WHERE R.USER_ID = #{userId}
+              AND S.CO_ID = #{coId}
+              AND S.USE_YN = 'Y'
+              AND CURDATE() BETWEEN DATE(S.BGNG_DT) AND DATE(S.END_DT)) AS todayScheduleCount,
+          (SELECT COUNT(DISTINCT M.BIZ_ID)
+             FROM biz_mnpw M
+             JOIN biz_info B ON B.BIZ_ID = M.BIZ_ID
+            WHERE M.USER_ID = #{userId}
+              AND M.USE_YN = 'Y'
+              AND B.CO_ID = #{coId}
+              AND B.BIZ_STTS_CD = 'PRGRS'
+              AND (M.INPUT_BGNG_YMD IS NULL OR M.INPUT_BGNG_YMD &lt;= CURDATE())
+              AND (M.INPUT_END_YMD IS NULL OR M.INPUT_END_YMD &gt;= CURDATE())) AS myProjectCount,
+          (SELECT COUNT(DISTINCT S.SCHDL_SN)
+             FROM schdl_info S
+             JOIN schdl_user_rel R ON R.SCHDL_SN = S.SCHDL_SN
+            WHERE R.USER_ID = #{userId}
+              AND S.CO_ID = #{coId}
+              AND S.USE_YN = 'Y'
+              AND S.BGNG_DT &lt; DATE_ADD(LAST_DAY(CURDATE()), INTERVAL 1 DAY)
+              AND S.END_DT &gt;= DATE_FORMAT(CURDATE(), '%Y-%m-01')) AS monthScheduleCount,
+          (SELECT COUNT(*)
+             FROM work_hstry H
+            WHERE H.USER_ID = #{userId}
+              AND H.WORK_YMD = CURDATE()
+              AND H.GTWK_DT IS NOT NULL) AS todayAttendCount
+    </select>
+
+    <select id="selectWorkTodayScheduleList" parameterType="map" resultType="hashmap">
+        SELECT S.SCHDL_SN AS schdlSn,
+               S.SCHDL_NM AS schdlNm,
+               S.SCHDL_SE_CD AS schdlSeCd,
+               IFNULL(C.CD_NM, S.SCHDL_SE_CD) AS schdlSeNm,
+               DATE_FORMAT(S.BGNG_DT, '%H:%i') AS bgngTm,
+               DATE_FORMAT(S.END_DT, '%H:%i') AS endTm,
+               S.ALL_DAY_YN AS allDayYn,
+               S.PLACE_NM AS placeNm,
+               B.BIZ_NM AS bizNm
+        FROM schdl_info S
+        JOIN schdl_user_rel R ON R.SCHDL_SN = S.SCHDL_SN
+        LEFT JOIN cmn_cd C ON C.CD_GROUP_ID = 'CAL_SCHDL_SE_CD'
+                           AND C.CD = S.SCHDL_SE_CD AND C.USE_YN = 'Y'
+        LEFT JOIN biz_info B ON B.BIZ_ID = S.BIZ_ID
+        WHERE R.USER_ID = #{userId}
+          AND S.CO_ID = #{coId}
+          AND S.USE_YN = 'Y'
+          AND CURDATE() BETWEEN DATE(S.BGNG_DT) AND DATE(S.END_DT)
+        ORDER BY S.ALL_DAY_YN DESC, S.BGNG_DT
+        LIMIT 10
+    </select>
+
+    <select id="selectProjectSummary" parameterType="map" resultType="hashmap">
+        SELECT COUNT(DISTINCT B.BIZ_ID) AS projectCount,
+               COUNT(DISTINCT CASE WHEN B.BIZ_STTS_CD = 'PRGRS' THEN B.BIZ_ID END) AS activeProjectCount,
+               COUNT(DISTINCT CASE WHEN M.USE_YN = 'Y' THEN COALESCE(M.USER_ID, CONCAT('EXT:', M.INPUT_MNPW_NM)) END) AS inputMnpwCount,
+               COUNT(DISTINCT CASE WHEN S.USE_YN = 'Y'
+                                    AND S.SCHDL_END_YMD BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)
+                                   THEN S.BIZ_SCHDL_SN END) AS dueScheduleCount
+        FROM biz_info B
+        LEFT JOIN biz_mnpw M ON M.BIZ_ID = B.BIZ_ID
+        LEFT JOIN biz_schdl S ON S.BIZ_ID = B.BIZ_ID
+        WHERE B.CO_ID = #{coId}
+          AND (#{allCompanyYn} = 'Y' OR EXISTS (
+                SELECT 1 FROM biz_mnpw PM
+                 WHERE PM.BIZ_ID = B.BIZ_ID
+                   AND PM.USER_ID = #{userId}
+                   AND PM.USE_YN = 'Y'
+          ))
+    </select>
+
+    <select id="selectProjectStatusList" parameterType="map" resultType="hashmap">
+        SELECT B.BIZ_ID AS bizId,
+               B.BIZ_NM AS bizNm,
+               B.BIZ_STTS_CD AS bizSttsCd,
+               IFNULL(C.CD_NM, B.BIZ_STTS_CD) AS bizSttsNm,
+               B.BIZ_BGNG_YMD AS bizBgngYmd,
+               B.BIZ_END_YMD AS bizEndYmd,
+               CASE
+                 WHEN B.BIZ_BGNG_YMD IS NULL OR B.BIZ_END_YMD IS NULL THEN 0
+                 WHEN B.BIZ_END_YMD &lt;= B.BIZ_BGNG_YMD THEN 100
+                 ELSE LEAST(100, GREATEST(0,
+                      ROUND(DATEDIFF(CURDATE(), B.BIZ_BGNG_YMD) * 100
+                          / DATEDIFF(B.BIZ_END_YMD, B.BIZ_BGNG_YMD))))
+               END AS periodProgress,
+               (SELECT COUNT(*) FROM biz_mnpw M
+                 WHERE M.BIZ_ID = B.BIZ_ID AND M.USE_YN = 'Y'
+                   AND (M.INPUT_BGNG_YMD IS NULL OR M.INPUT_BGNG_YMD &lt;= CURDATE())
+                   AND (M.INPUT_END_YMD IS NULL OR M.INPUT_END_YMD &gt;= CURDATE())) AS inputMnpwCount
+        FROM biz_info B
+        LEFT JOIN cmn_cd C ON C.CD_GROUP_ID = 'BIZ_STTS_CD'
+                           AND C.CD = B.BIZ_STTS_CD AND C.USE_YN = 'Y'
+        WHERE B.CO_ID = #{coId}
+          AND (#{allCompanyYn} = 'Y' OR EXISTS (
+                SELECT 1 FROM biz_mnpw PM
+                 WHERE PM.BIZ_ID = B.BIZ_ID
+                   AND PM.USER_ID = #{userId}
+                   AND PM.USE_YN = 'Y'
+          ))
+        ORDER BY FIELD(B.BIZ_STTS_CD, 'PRGRS', 'READY', 'HOLD', 'CMPTN', 'CANCEL'),
+                 B.BIZ_END_YMD, B.BIZ_NM
+        LIMIT 8
+    </select>
+
+    <select id="selectProjectScheduleList" parameterType="map" resultType="hashmap">
+        SELECT S.BIZ_SCHDL_SN AS bizSchdlSn,
+               S.SCHDL_NM AS schdlNm,
+               S.SCHDL_BGNG_YMD AS schdlBgngYmd,
+               S.SCHDL_END_YMD AS schdlEndYmd,
+               B.BIZ_NM AS bizNm,
+               U.USER_NM AS picNm,
+               DATEDIFF(S.SCHDL_END_YMD, CURDATE()) AS remainDay
+        FROM biz_schdl S
+        JOIN biz_info B ON B.BIZ_ID = S.BIZ_ID
+        LEFT JOIN user_info U ON U.USER_ID = S.PIC_ID
+        WHERE B.CO_ID = #{coId}
+          AND S.USE_YN = 'Y'
+          AND S.SCHDL_END_YMD &gt;= CURDATE()
+          AND (#{allCompanyYn} = 'Y' OR EXISTS (
+                SELECT 1 FROM biz_mnpw PM
+                 WHERE PM.BIZ_ID = B.BIZ_ID
+                   AND PM.USER_ID = #{userId}
+                   AND PM.USE_YN = 'Y'
+          ))
+        ORDER BY S.SCHDL_END_YMD, S.BIZ_SCHDL_SN
+        LIMIT 6
+    </select>
+
+    <sql id="orgScopeCte">
+        WITH RECURSIVE dept_scope AS (
+            SELECT D.DEPT_ID
+            FROM dept_info D
+            WHERE D.CO_ID = #{coId}
+              AND D.USE_YN = 'Y'
+              AND (#{allCompanyYn} = 'Y' OR D.DEPT_ID = #{deptId})
+            UNION
+            SELECT C.DEPT_ID
+            FROM dept_info C
+            JOIN dept_scope P ON C.UP_DEPT_ID = P.DEPT_ID
+            WHERE C.CO_ID = #{coId} AND C.USE_YN = 'Y'
+        ),
+        scope_user AS (
+            SELECT U.USER_ID, U.DEPT_ID
+            FROM user_info U
+            WHERE U.CO_ID = #{coId}
+              AND U.USE_YN = 'Y'
+              AND (#{allCompanyYn} = 'Y' OR U.DEPT_ID IN (SELECT DEPT_ID FROM dept_scope))
+        )
+    </sql>
+
+    <select id="selectOrgSummary" parameterType="map" resultType="hashmap">
+        <include refid="orgScopeCte"/>
+        SELECT
+          (SELECT COUNT(*) FROM scope_user) AS orgUserCount,
+          (SELECT COUNT(DISTINCT H.USER_ID)
+             FROM work_hstry H JOIN scope_user U ON U.USER_ID = H.USER_ID
+            WHERE H.WORK_YMD = CURDATE() AND H.GTWK_DT IS NOT NULL) AS todayAttendCount,
+          (SELECT COUNT(DISTINCT R.USER_ID)
+             FROM schdl_info S
+             JOIN schdl_user_rel R ON R.SCHDL_SN = S.SCHDL_SN
+             JOIN scope_user U ON U.USER_ID = R.USER_ID
+            WHERE S.USE_YN = 'Y'
+              AND S.SCHDL_SE_CD IN ('VAC','BIZTRIP','OUTSIDE','HOME','CLIENT')
+              AND NOW() BETWEEN S.BGNG_DT AND S.END_DT) AS externalUserCount,
+          (SELECT IFNULL(ROUND(AVG(X.TOTAL_RT)), 0)
+             FROM (SELECT M.USER_ID, SUM(M.INPUT_RT) AS TOTAL_RT
+                     FROM biz_mnpw M JOIN scope_user U ON U.USER_ID = M.USER_ID
+                    WHERE M.USE_YN = 'Y'
+                      AND (M.INPUT_BGNG_YMD IS NULL OR M.INPUT_BGNG_YMD &lt;= CURDATE())
+                      AND (M.INPUT_END_YMD IS NULL OR M.INPUT_END_YMD &gt;= CURDATE())
+                    GROUP BY M.USER_ID) X) AS avgInputRate,
+          (SELECT COUNT(*)
+             FROM (SELECT M.USER_ID
+                     FROM biz_mnpw M JOIN scope_user U ON U.USER_ID = M.USER_ID
+                    WHERE M.USE_YN = 'Y'
+                      AND (M.INPUT_BGNG_YMD IS NULL OR M.INPUT_BGNG_YMD &lt;= CURDATE())
+                      AND (M.INPUT_END_YMD IS NULL OR M.INPUT_END_YMD &gt;= CURDATE())
+                    GROUP BY M.USER_ID
+                   HAVING SUM(M.INPUT_RT) &gt; 100) O) AS overInputUserCount
+    </select>
+
+    <select id="selectOrgDeptStatusList" parameterType="map" resultType="hashmap">
+        <include refid="orgScopeCte"/>
+        SELECT D.DEPT_ID AS deptId,
+               D.DEPT_NM AS deptNm,
+               COUNT(DISTINCT U.USER_ID) AS userCount,
+               COUNT(DISTINCT CASE WHEN H.GTWK_DT IS NOT NULL THEN U.USER_ID END) AS attendCount,
+               IFNULL(ROUND(AVG(IR.TOTAL_RT)), 0) AS avgInputRate
+        FROM dept_info D
+        JOIN dept_scope DS ON DS.DEPT_ID = D.DEPT_ID
+        LEFT JOIN scope_user U ON U.DEPT_ID = D.DEPT_ID
+        LEFT JOIN work_hstry H ON H.USER_ID = U.USER_ID AND H.WORK_YMD = CURDATE()
+        LEFT JOIN (
+            SELECT M.USER_ID, SUM(M.INPUT_RT) AS TOTAL_RT
+            FROM biz_mnpw M
+            WHERE M.USE_YN = 'Y'
+              AND (M.INPUT_BGNG_YMD IS NULL OR M.INPUT_BGNG_YMD &lt;= CURDATE())
+              AND (M.INPUT_END_YMD IS NULL OR M.INPUT_END_YMD &gt;= CURDATE())
+            GROUP BY M.USER_ID
+        ) IR ON IR.USER_ID = U.USER_ID
+        GROUP BY D.DEPT_ID, D.DEPT_NM, D.SORT_SEQ
+        ORDER BY D.SORT_SEQ, D.DEPT_NM
+        LIMIT 10
+    </select>
+
+    <select id="selectOrgTodayScheduleList" parameterType="map" resultType="hashmap">
+        <include refid="orgScopeCte"/>
+        SELECT S.SCHDL_NM AS schdlNm,
+               S.SCHDL_SE_CD AS schdlSeCd,
+               IFNULL(C.CD_NM, S.SCHDL_SE_CD) AS schdlSeNm,
+               DATE_FORMAT(S.BGNG_DT, '%H:%i') AS bgngTm,
+               DATE_FORMAT(S.END_DT, '%H:%i') AS endTm,
+               U.USER_NM AS userNm,
+               D.DEPT_NM AS deptNm
+        FROM schdl_info S
+        JOIN schdl_user_rel R ON R.SCHDL_SN = S.SCHDL_SN
+        JOIN scope_user SU ON SU.USER_ID = R.USER_ID
+        JOIN user_info U ON U.USER_ID = SU.USER_ID
+        LEFT JOIN dept_info D ON D.DEPT_ID = U.DEPT_ID
+        LEFT JOIN cmn_cd C ON C.CD_GROUP_ID = 'CAL_SCHDL_SE_CD'
+                           AND C.CD = S.SCHDL_SE_CD AND C.USE_YN = 'Y'
+        WHERE S.USE_YN = 'Y'
+          AND CURDATE() BETWEEN DATE(S.BGNG_DT) AND DATE(S.END_DT)
+        ORDER BY S.BGNG_DT, U.USER_NM
+        LIMIT 8
+    </select>
+
+    <select id="selectManagementSummary" parameterType="map" resultType="hashmap">
+        SELECT
+          (SELECT COUNT(*) FROM user_info U
+            WHERE U.CO_ID = #{coId} AND U.USE_YN = 'Y') AS employeeCount,
+          (SELECT COUNT(*) FROM biz_info B
+            WHERE B.CO_ID = #{coId} AND B.BIZ_STTS_CD = 'PRGRS') AS activeProjectCount,
+          (SELECT IFNULL(SUM(B.CTRT_AMT), 0) FROM biz_info B
+            WHERE B.CO_ID = #{coId} AND B.BIZ_STTS_CD = 'PRGRS') AS activeContractAmount,
+          (SELECT IFNULL(SUM(C.OCRN_CST), 0)
+             FROM biz_cst C JOIN biz_info B ON B.BIZ_ID = C.BIZ_ID
+            WHERE B.CO_ID = #{coId} AND C.USE_YN = 'Y'
+              AND C.OCRN_YMD BETWEEN DATE_FORMAT(CURDATE(), '%Y-%m-01') AND LAST_DAY(CURDATE())) AS monthCostAmount,
+          (SELECT COUNT(*) FROM biz_info B
+            WHERE B.CO_ID = #{coId}
+              AND B.CTRT_YMD BETWEEN DATE_FORMAT(CURDATE(), '%Y-%m-01') AND LAST_DAY(CURDATE())) AS monthContractCount
+    </select>
+
+    <select id="selectManagementProjectList" parameterType="map" resultType="hashmap">
+        SELECT B.BIZ_ID AS bizId,
+               B.BIZ_NM AS bizNm,
+               B.CTRT_AMT AS ctrtAmt,
+               IFNULL(SUM(C.OCRN_CST), 0) AS costAmt,
+               IFNULL(B.CTRT_AMT, 0) - IFNULL(SUM(C.OCRN_CST), 0) AS currentProfitAmt,
+               B.BIZ_END_YMD AS bizEndYmd
+        FROM biz_info B
+        LEFT JOIN biz_cst C ON C.BIZ_ID = B.BIZ_ID AND C.USE_YN = 'Y'
+        WHERE B.CO_ID = #{coId}
+          AND B.BIZ_STTS_CD = 'PRGRS'
+        GROUP BY B.BIZ_ID, B.BIZ_NM, B.CTRT_AMT, B.BIZ_END_YMD
+        ORDER BY B.BIZ_END_YMD, B.BIZ_NM
+        LIMIT 8
+    </select>
+</mapper>

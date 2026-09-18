@@ -1,0 +1,308 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.TRSolution.trsIbp.dept.mapper.DeptMapper">
+
+    <!-- ============================================================ -->
+    <!--  DeptVO ResultMap                                             -->
+    <!-- ============================================================ -->
+    <resultMap id="deptResultMap" type="deptVO">
+        <!-- DeptVO 직접 필드 -->
+        <id     property="deptId"      column="DEPT_ID"/>
+        <result property="deptNm"      column="DEPT_NM"/>
+        <result property="upDeptId"    column="UP_DEPT_ID"/>
+        <result property="sortDeptSeq" column="SORT_SEQ"/>
+        <result property="upDeptNm"    column="UP_DEPT_NM"/>
+        <result property="deptSeCd"    column="DEPT_SE_CD"/>
+        <result property="deptExpln"   column="DEPT_EXPLN"/>
+        <result property="mngrUserId"  column="MNGR_USER_ID"/>
+        <result property="mngrUserNm"  column="MNGR_USER_NM"/>
+        <result property="mngrJbpsNm"  column="MNGR_JBPS_NM"/>
+        <result property="memberCnt"   column="MEMBER_CNT"/>
+        <result property="childCnt"    column="CHILD_CNT"/>
+
+        <!-- CompanyVO 상속 필드 -->
+        <result property="coId"        column="CO_ID"/>
+
+        <!-- CompanyVO 또는 BaseVO에 존재하는 경우 매핑됨 -->
+        <result property="useYn"       column="USE_YN"/>
+        <result property="regDt"       column="REG_DT"/>
+    </resultMap>
+
+    <resultMap id="orgMemberResultMap" type="userVO">
+        <id property="userId" column="USER_ID"/>
+        <result property="userNm" column="USER_NM"/>
+        <result property="coId" column="CO_ID"/>
+        <result property="deptId" column="DEPT_ID"/>
+        <result property="deptNm" column="DEPT_NM"/>
+        <result property="jbpsNm" column="JBPS_NM"/>
+    </resultMap>
+
+
+    <!-- ============================================================ -->
+    <!--  부서 목록 조회                                               -->
+    <!-- ============================================================ -->
+    <select id="selectDeptList" parameterType="userVO" resultMap="deptResultMap">
+        SELECT
+             D.DEPT_ID
+            ,D.DEPT_NM
+            ,D.UP_DEPT_ID
+            ,D.CO_ID
+            ,D.SORT_SEQ
+            ,D.DEPT_SE_CD
+            ,D.DEPT_EXPLN
+            ,D.MNGR_USER_ID
+            ,D.USE_YN
+            ,D.REG_DT
+            ,PD.DEPT_NM AS UP_DEPT_NM
+            ,M.USER_NM AS MNGR_USER_NM
+            ,M.JBPS_NM AS MNGR_JBPS_NM
+        FROM dept_info D
+        LEFT JOIN dept_info PD
+               ON D.UP_DEPT_ID = PD.DEPT_ID
+        LEFT JOIN user_info M
+               ON D.MNGR_USER_ID = M.USER_ID
+        WHERE D.USE_YN = 'Y'
+        <if test="coId != null and coId != ''">
+            AND D.CO_ID = #{coId}
+        </if>
+        ORDER BY D.SORT_SEQ ASC, D.DEPT_ID ASC
+    </select>
+
+
+    <!-- ============================================================ -->
+    <!--  부서 등록                                                    -->
+    <!-- ============================================================ -->
+    <insert id="insertDept" parameterType="deptVO">
+        INSERT INTO dept_info (
+             DEPT_ID
+            ,CO_ID
+            ,DEPT_NM
+            ,UP_DEPT_ID
+            ,SORT_SEQ
+            ,DEPT_SE_CD
+            ,DEPT_EXPLN
+            ,MNGR_USER_ID
+            ,USE_YN
+            ,REG_DT
+        ) VALUES (
+             #{deptId}
+            ,#{coId}
+            ,#{deptNm}
+            ,<choose>
+                <when test="upDeptId != null and upDeptId != ''">
+                    #{upDeptId}
+                </when>
+                <otherwise>
+                    NULL
+                </otherwise>
+             </choose>
+            ,#{sortDeptSeq}
+            ,#{deptSeCd}
+            ,#{deptExpln}
+            ,#{mngrUserId}
+            ,'Y'
+            ,NOW()
+        )
+    </insert>
+
+
+    <!-- ============================================================ -->
+    <!--  부서 트리 조회                                               -->
+    <!--  jsTree 같은 화면용이면 Map 유지 가능                         -->
+    <!-- ============================================================ -->
+    <select id="selectDeptTreeList" parameterType="deptVO" resultType="java.util.LinkedHashMap">
+        SELECT
+             D.DEPT_ID AS id
+            ,D.DEPT_NM AS text
+            ,IFNULL(D.UP_DEPT_ID, '#') AS parent
+            ,D.CO_ID AS coId
+            ,D.SORT_SEQ AS sortDeptSeq
+            ,D.DEPT_SE_CD AS deptSeCd
+            ,D.USE_YN AS useYn
+        FROM dept_info D
+        WHERE D.CO_ID = #{coId}
+          AND D.USE_YN = 'Y'
+        ORDER BY D.UP_DEPT_ID ASC, D.SORT_SEQ ASC
+    </select>
+
+
+    <!-- ============================================================ -->
+    <!--  부서 상세 조회                                               -->
+    <!-- ============================================================ -->
+    <select id="selectDeptDetail" parameterType="deptVO" resultMap="deptResultMap">
+        SELECT
+             D.DEPT_ID
+            ,D.CO_ID
+            ,D.DEPT_NM
+            ,D.UP_DEPT_ID
+            ,D.SORT_SEQ
+            ,D.DEPT_SE_CD
+            ,D.DEPT_EXPLN
+            ,D.MNGR_USER_ID
+            ,D.USE_YN
+            ,D.REG_DT
+            ,PD.DEPT_NM AS UP_DEPT_NM
+            ,M.USER_NM AS MNGR_USER_NM
+            ,M.JBPS_NM AS MNGR_JBPS_NM
+        FROM dept_info D
+        LEFT JOIN dept_info PD
+               ON D.UP_DEPT_ID = PD.DEPT_ID
+        LEFT JOIN user_info M
+               ON D.MNGR_USER_ID = M.USER_ID
+        WHERE D.DEPT_ID = #{deptId}
+          AND D.CO_ID = #{coId}
+    </select>
+
+
+    <!-- ============================================================ -->
+    <!--  부서 수정                                                    -->
+    <!-- ============================================================ -->
+    <update id="updateDept" parameterType="deptVO">
+        UPDATE dept_info
+        SET
+             DEPT_NM = #{deptNm}
+            ,SORT_SEQ = #{sortDeptSeq}
+            ,DEPT_EXPLN = #{deptExpln}
+            ,MNGR_USER_ID = #{mngrUserId}
+            <choose>
+                <when test="upDeptId != null and upDeptId != ''">
+                    ,UP_DEPT_ID = #{upDeptId}
+                </when>
+                <otherwise>
+                    ,UP_DEPT_ID = NULL
+                </otherwise>
+            </choose>
+        WHERE DEPT_ID = #{deptId}
+          AND CO_ID = #{coId}
+    </update>
+
+
+    <!-- ============================================================ -->
+    <!--  부서 삭제                                                    -->
+    <!-- ============================================================ -->
+    <update id="deleteDept" parameterType="deptVO">
+        UPDATE dept_info
+        SET USE_YN = 'N'
+        WHERE DEPT_ID = #{deptId}
+          AND CO_ID = #{coId}
+    </update>
+
+    <!-- 조직 관리 화면 상단 요약 -->
+    <select id="selectOrganizationSummary" parameterType="deptVO" resultType="java.util.LinkedHashMap">
+        SELECT
+             C.CO_ID AS coId
+            ,C.CO_NM AS coNm
+            ,(SELECT COUNT(1)
+                FROM dept_info D
+               WHERE D.CO_ID = C.CO_ID
+                 AND D.USE_YN = 'Y') AS orgCnt
+            ,(SELECT COUNT(1)
+                FROM user_info U
+               WHERE U.CO_ID = C.CO_ID
+                 AND U.USE_YN = 'Y') AS memberCnt
+            ,(SELECT COUNT(1)
+                FROM user_info U
+                LEFT JOIN dept_info D
+                       ON U.DEPT_ID = D.DEPT_ID
+                      AND D.CO_ID = U.CO_ID
+                      AND D.USE_YN = 'Y'
+               WHERE U.CO_ID = C.CO_ID
+                 AND U.USE_YN = 'Y'
+                 AND D.DEPT_ID IS NULL) AS unassignedCnt
+        FROM co_info C
+        WHERE C.CO_ID = #{coId}
+          AND C.USE_YN = 'Y'
+    </select>
+
+    <!-- 조직도 카드·트리·상세 화면 공통 목록 -->
+    <select id="selectOrganizationList" parameterType="deptVO" resultMap="deptResultMap">
+        SELECT
+             D.DEPT_ID
+            ,D.CO_ID
+            ,D.DEPT_NM
+            ,D.UP_DEPT_ID
+            ,D.SORT_SEQ
+            ,D.DEPT_SE_CD
+            ,D.DEPT_EXPLN
+            ,D.MNGR_USER_ID
+            ,D.USE_YN
+            ,D.REG_DT
+            ,PD.DEPT_NM AS UP_DEPT_NM
+            ,M.USER_NM AS MNGR_USER_NM
+            ,M.JBPS_NM AS MNGR_JBPS_NM
+            ,(SELECT COUNT(1)
+                FROM user_info U
+               WHERE U.CO_ID = D.CO_ID
+                 AND U.DEPT_ID = D.DEPT_ID
+                 AND U.USE_YN = 'Y') AS MEMBER_CNT
+            ,(SELECT COUNT(1)
+                FROM dept_info C
+               WHERE C.CO_ID = D.CO_ID
+                 AND C.UP_DEPT_ID = D.DEPT_ID
+                 AND C.USE_YN = 'Y') AS CHILD_CNT
+        FROM dept_info D
+        LEFT JOIN dept_info PD
+               ON D.UP_DEPT_ID = PD.DEPT_ID
+              AND PD.CO_ID = D.CO_ID
+        LEFT JOIN user_info M
+               ON D.MNGR_USER_ID = M.USER_ID
+              AND M.CO_ID = D.CO_ID
+        WHERE D.CO_ID = #{coId}
+          AND D.USE_YN = 'Y'
+        ORDER BY
+             CASE D.DEPT_SE_CD WHEN 'HQ' THEN 1 WHEN 'DEPT' THEN 2 WHEN 'TEAM' THEN 3 ELSE 9 END
+            ,D.SORT_SEQ ASC
+            ,D.DEPT_NM ASC
+    </select>
+
+    <!-- 조직 상세와 조직장 선택에 사용할 회사 사용자 목록 -->
+    <select id="selectOrganizationMemberList" parameterType="deptVO" resultMap="orgMemberResultMap">
+        SELECT
+             U.USER_ID
+            ,U.USER_NM
+            ,U.CO_ID
+            ,U.DEPT_ID
+            ,D.DEPT_NM
+            ,U.JBPS_NM
+        FROM user_info U
+        LEFT JOIN dept_info D
+               ON U.DEPT_ID = D.DEPT_ID
+              AND D.CO_ID = U.CO_ID
+              AND D.USE_YN = 'Y'
+        WHERE U.CO_ID = #{coId}
+          AND U.USE_YN = 'Y'
+        ORDER BY IFNULL(D.SORT_SEQ, 9999), U.USER_NM, U.USER_ID
+    </select>
+
+    <select id="selectDeptIdCount" parameterType="deptVO" resultType="int">
+        SELECT COUNT(1)
+        FROM dept_info
+        WHERE DEPT_ID = #{deptId}
+    </select>
+
+    <select id="selectDeptChildCount" parameterType="deptVO" resultType="int">
+        SELECT COUNT(1)
+        FROM dept_info
+        WHERE CO_ID = #{coId}
+          AND UP_DEPT_ID = #{deptId}
+          AND USE_YN = 'Y'
+    </select>
+
+    <select id="selectDeptMemberCount" parameterType="deptVO" resultType="int">
+        SELECT COUNT(1)
+        FROM user_info
+        WHERE CO_ID = #{coId}
+          AND DEPT_ID = #{deptId}
+          AND USE_YN = 'Y'
+    </select>
+
+    <select id="selectManagerCount" parameterType="deptVO" resultType="int">
+        SELECT COUNT(1)
+        FROM user_info
+        WHERE CO_ID = #{coId}
+          AND USER_ID = #{mngrUserId}
+          AND USE_YN = 'Y'
+    </select>
+
+</mapper>

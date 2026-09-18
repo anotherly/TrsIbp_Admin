@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DevSync - 조직도 단일 화면 시안</title>
+    <style>
+        :root {
+            color-scheme: dark;
+            --bg: #080d17;
+            --sidebar: #030818;
+            --panel: #0e1625;
+            --panel-2: #111c2e;
+            --line: #233149;
+            --text: #e7edf7;
+            --muted: #8d9bb0;
+            --blue: #3b82f6;
+            --cyan: #22d3ee;
+            --green: #34d399;
+            --red: #fb7185;
+        }
+
+        * { box-sizing: border-box; }
+        html, body { min-height: 100%; }
+        body { margin: 0; background: radial-gradient(circle at 70% 0, rgba(37, 99, 235, .08), transparent 28%), var(--bg); color: var(--text); font-family: Inter, Pretendard, "Noto Sans KR", "Malgun Gothic", sans-serif; font-size: 14px; }
+        button, input, select, textarea { font: inherit; }
+        button { color: inherit; }
+        .app { display: grid; grid-template-columns: 248px minmax(0, 1fr); min-height: 100vh; }
+
+        .sidebar { position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; border-right: 1px solid #1e293b; background: rgba(3, 8, 24, .97); }
+        .logo { height: 91px; padding: 25px 20px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #1e293b; }
+        .logo-mark { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 10px; background: linear-gradient(145deg, var(--cyan), var(--blue)); box-shadow: 0 8px 24px rgba(34, 211, 238, .18); font-size: 21px; font-weight: 900; }
+        .logo strong { display: block; color: #fff; font-size: 20px; letter-spacing: .5px; }
+        .logo small { color: var(--cyan); font-size: 10px; font-weight: 800; letter-spacing: 1.6px; }
+        .profile { margin: 18px 13px 12px; padding: 14px; display: flex; align-items: center; gap: 11px; border: 1px solid #1f2b40; border-radius: 13px; background: rgba(15, 23, 42, .55); }
+        .avatar { width: 42px; height: 42px; display: grid; place-items: center; flex: 0 0 auto; border: 1px solid var(--blue); border-radius: 50%; background: linear-gradient(145deg, #1e3a5f, #172033); color: #bfdbfe; font-size: 13px; font-weight: 900; }
+        .profile strong { display: block; font-size: 13px; }
+        .profile small { color: var(--muted); font-size: 11px; }
+        .nav { flex: 1; padding: 4px 13px 20px; overflow-y: auto; }
+        .nav-group { margin-bottom: 4px; }
+        .nav-main { width: 100%; padding: 12px 13px; display: flex; align-items: center; gap: 11px; border: 0; border-radius: 9px; background: transparent; color: #b7c2d1; text-align: left; cursor: pointer; }
+        .nav-main:hover, .nav-group.open .nav-main { background: #111b2d; color: #fff; }
+        .nav-icon { width: 20px; color: #7f8ca1; text-align: center; }
+        .nav-main span:nth-child(2) { flex: 1; font-size: 13px; font-weight: 750; }
+        .nav-arrow { color: #64748b; font-size: 11px; }
+        .subnav { margin: 2px 8px 6px 34px; }
+        .subnav a { display: block; margin: 3px 0; padding: 9px 10px; border-radius: 8px; color: #8e9bb0; font-size: 12px; text-decoration: none; }
+        .subnav a.active { color: var(--cyan); background: #101d32; font-weight: 850; }
+        .sidebar-foot { padding: 17px 18px; border-top: 1px solid #1e293b; color: #64748b; font-size: 10px; }
+
+        .shell { min-width: 0; }
+        .topbar { height: 72px; padding: 0 30px; display: flex; align-items: center; justify-content: space-between; gap: 24px; border-bottom: 1px solid #1f2937; background: rgba(12, 19, 32, .88); backdrop-filter: blur(18px); }
+        .topbar h2 { margin: 0; font-size: 15px; }
+        .top-search { width: min(390px, 38vw); padding: 10px 14px; border: 1px solid #26344b; border-radius: 10px; background: #0b1424; color: #a9b5c7; font-size: 12px; }
+        .top-user { display: flex; align-items: center; gap: 14px; color: #cbd5e1; }
+        main { padding: 24px 30px 38px; }
+        .breadcrumb { margin-bottom: 16px; color: #6f7f96; font-size: 11px; }
+        .page-head { margin-bottom: 20px; display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; }
+        h1 { margin: 0 0 7px; font-size: 25px; letter-spacing: -.5px; }
+        .page-head p { margin: 0; color: var(--muted); font-size: 12px; }
+        .actions { display: flex; align-items: center; gap: 9px; }
+        .btn { min-height: 38px; padding: 0 14px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: 1px solid #334155; border-radius: 9px; background: #172235; color: #d7e2f0; font-size: 12px; font-weight: 800; cursor: pointer; }
+        .btn:hover { border-color: #4f6b91; background: #1b2a41; }
+        .btn.primary { border-color: var(--blue); background: #2563eb; color: #fff; }
+        .btn.danger { border-color: rgba(251, 113, 133, .4); background: rgba(127, 29, 29, .22); color: #fda4af; }
+        .btn:disabled { opacity: .4; cursor: not-allowed; }
+        .icon-btn { width: 30px; height: 30px; padding: 0; border: 1px solid transparent; border-radius: 8px; background: transparent; color: #94a3b8; cursor: pointer; }
+        .icon-btn:hover { border-color: #334155; background: #172235; color: #fff; }
+
+        .stats { margin-bottom: 16px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+        .stat { min-width: 0; padding: 15px 17px; border: 1px solid var(--line); border-radius: 13px; background: rgba(14, 22, 37, .82); }
+        .stat span { display: block; color: var(--muted); font-size: 11px; font-weight: 750; }
+        .stat strong { margin-top: 6px; display: block; overflow: hidden; font-size: 22px; text-overflow: ellipsis; white-space: nowrap; }
+        .stat em { color: #6ee7b7; font-size: 10px; font-style: normal; }
+
+        .workspace { min-height: 640px; overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: radial-gradient(circle at 50% 0, rgba(59, 130, 246, .09), transparent 34%), rgba(10, 17, 30, .9); box-shadow: 0 22px 60px rgba(0, 0, 0, .18); }
+        .workspace-head { min-height: 72px; padding: 15px 18px; display: flex; align-items: center; justify-content: space-between; gap: 18px; border-bottom: 1px solid var(--line); }
+        .workspace-head h3 { margin: 0 0 5px; font-size: 14px; }
+        .workspace-head p { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
+        .workspace-tools { display: flex; align-items: center; gap: 8px; }
+        .search { width: 220px; height: 38px; padding: 0 12px; border: 1px solid #293850; border-radius: 9px; outline: 0; background: #0a1322; color: #dbeafe; font-size: 11px; }
+        .search:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(59, 130, 246, .1); }
+        .guide { padding: 10px 18px; display: flex; flex-wrap: wrap; align-items: center; gap: 16px; border-bottom: 1px solid rgba(148, 163, 184, .12); color: #73839a; font-size: 10px; }
+        .guide span { display: inline-flex; align-items: center; gap: 6px; }
+        .guide b { color: #c6d3e4; }
+        .guide .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--blue); }
+
+        .chart-scroll { height: 620px; overflow: auto; }
+        .chart { min-width: 100%; width: max-content; padding: 34px 36px 86px; }
+        .root-wrap { position: relative; padding-bottom: 38px; display: flex; justify-content: center; }
+        .root-wrap.has-children::after { content: ""; position: absolute; left: 50%; bottom: 0; width: 1px; height: 38px; background: #3e5575; }
+        .branches { position: relative; padding-top: 28px; display: grid; gap: 24px; }
+        .branches::before { content: ""; position: absolute; top: 0; left: var(--edge); right: var(--edge); height: 1px; background: #3e5575; }
+        .branch { position: relative; min-width: 235px; }
+        .branch::before { content: ""; position: absolute; top: -28px; left: 50%; width: 1px; height: 28px; background: #3e5575; }
+        .branch-body { position: relative; margin: 16px 7px 0 18px; padding-left: 18px; border-left: 1px solid #31425c; }
+        .branch-body.hidden { display: none; }
+        .child-node { position: relative; margin: 9px 0; }
+        .child-node > .org-card::before { content: ""; position: absolute; top: 50%; left: -19px; width: 19px; height: 1px; background: #31425c; }
+        .nested { position: relative; margin: 7px 0 12px 16px; padding-left: 18px; border-left: 1px solid #293a53; }
+        .nested.hidden { display: none; }
+        .nested .child-node > .org-card::before { background: #293a53; }
+
+        .org-card { position: relative; min-height: 82px; padding: 12px 82px 22px 13px; border: 1px solid #2a3b55; border-radius: 11px; background: linear-gradient(145deg, #14233a, #101a2b); box-shadow: 0 10px 26px rgba(0, 0, 0, .2); cursor: pointer; transition: border-color .16s, transform .16s, box-shadow .16s; user-select: none; }
+        .org-card:hover { border-color: #4a6d9f; transform: translateY(-1px); }
+        .org-card.selected { border-color: var(--blue); box-shadow: 0 0 0 2px rgba(59, 130, 246, .16), 0 12px 28px rgba(0, 0, 0, .22); }
+        .org-card.filtered-out { display: none; }
+        .root-card { width: 245px; padding: 14px 15px 22px; text-align: center; }
+        .root-card .type-badge { margin-right: auto; margin-left: auto; }
+        .type-badge { width: max-content; margin-bottom: 7px; padding: 3px 7px; display: block; border-radius: 999px; background: rgba(34, 211, 238, .1); color: #67e8f9; font-size: 8px; line-height: 1.2; font-weight: 900; }
+        .org-card strong { display: block; overflow: hidden; color: #f8fafc; font-size: 12px; font-weight: 900; text-overflow: ellipsis; white-space: nowrap; }
+        .org-card small { margin-top: 5px; display: block; overflow: hidden; color: #8493a8; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+        .card-actions { position: absolute; top: 9px; right: 9px; display: flex; align-items: center; gap: 5px; }
+        .card-btn { width: 25px; height: 25px; padding: 0; display: grid; place-items: center; border: 0; border-radius: 6px; background: rgba(59, 130, 246, .14); color: #93c5fd; font-size: 12px; cursor: pointer; }
+        .card-btn:hover { background: rgba(59, 130, 246, .3); color: #fff; }
+        .card-btn.toggle { background: rgba(148, 163, 184, .12); color: #aebdd1; font-size: 9px; transition: transform .16s, background .16s; }
+        .card-btn.toggle:hover { background: rgba(148, 163, 184, .24); color: #fff; }
+        .card-btn.toggle[aria-expanded="false"] { transform: rotate(-90deg); }
+        .card-detail { position: absolute; right: 10px; bottom: 8px; padding: 0; border: 0; background: transparent; color: #7692b8; font-size: 9px; font-weight: 800; cursor: pointer; }
+        .card-detail:hover { color: #bfdbfe; text-decoration: underline; }
+        .root-card .card-actions { top: 10px; }
+        .empty { padding: 100px 20px; color: #718096; text-align: center; font-size: 12px; }
+
+        .modal { position: fixed; inset: 0; z-index: 1000; padding: 24px; display: none; align-items: center; justify-content: center; background: rgba(2, 6, 23, .78); backdrop-filter: blur(5px); }
+        .modal.open { display: flex; }
+        .modal-panel { width: min(650px, 100%); max-height: calc(100vh - 48px); overflow: auto; border: 1px solid #334155; border-radius: 16px; background: #0e1727; box-shadow: 0 30px 90px rgba(0, 0, 0, .55); }
+        .modal-panel.detail-modal-panel { width: min(560px, 100%); }
+        .modal-head { padding: 18px 21px; display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; border-bottom: 1px solid var(--line); }
+        .modal-head h3 { margin: 0 0 5px; font-size: 17px; }
+        .modal-head p { margin: 0; color: var(--muted); font-size: 10px; }
+        .modal-body { padding: 20px 21px; }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; }
+        .field { min-width: 0; }
+        .field.full { grid-column: 1 / -1; }
+        .field-label { min-height: 18px; margin-bottom: 6px; display: flex; align-items: center; gap: 7px; color: #b7c4d5; font-size: 10px; font-weight: 800; }
+        .field-label em { color: #60a5fa; font-style: normal; }
+        .label-help { color: #6f8096; font-size: 9px; font-weight: 500; }
+        .input { width: 100%; min-height: 42px; padding: 0 11px; border: 1px solid #30415b; border-radius: 8px; outline: 0; background: #0a1322; color: #e2e8f0; font-size: 11px; }
+        textarea.input { min-height: 78px; padding-top: 10px; resize: vertical; }
+        .input:focus { border-color: var(--blue); }
+        .input.invalid { border-color: #ef4444; box-shadow: 0 0 0 2px rgba(239, 68, 68, .1); }
+        .field-message { min-height: 16px; padding-top: 4px; color: #fb7185; font-size: 9px; line-height: 12px; }
+        .modal-foot { padding: 14px 21px; display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--line); background: rgba(7, 13, 24, .7); }
+        .detail-title { padding-bottom: 16px; border-bottom: 1px solid rgba(148, 163, 184, .14); }
+        .detail-title h4 { margin: 8px 0 6px; font-size: 20px; }
+        .detail-title p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.6; }
+        .kv { margin: 18px 0 4px; display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 12px 9px; font-size: 11px; }
+        .kv dt { color: #718096; }
+        .kv dd { margin: 0; color: #dce6f3; font-weight: 750; }
+        .member-note { margin-top: 18px; padding: 11px 12px; border: 1px solid rgba(59, 130, 246, .2); border-radius: 9px; background: rgba(30, 64, 175, .09); color: #91a6c2; font-size: 10px; line-height: 1.6; }
+        .toast { position: fixed; left: 50%; bottom: 34px; z-index: 2000; min-width: 320px; max-width: calc(100vw - 36px); padding: 13px 16px; display: none; align-items: center; justify-content: center; gap: 10px; border: 1px solid #365277; border-radius: 11px; background: #14233a; color: #dbeafe; box-shadow: 0 18px 55px rgba(0, 0, 0, .55); font-size: 11px; font-weight: 800; transform: translateX(-50%); }
+        .toast.error { border-color: #7f1d1d; background: #2a151b; color: #fecaca; }
+        .toast.show { display: flex; animation: toast-in .18s ease-out; }
+        @keyframes toast-in { from { opacity: 0; transform: translate(-50%, 8px); } }
+
+        @media (max-width: 1120px) {
+            .app { grid-template-columns: 88px minmax(0, 1fr); }
+            .logo { justify-content: center; padding: 20px; }
+            .logo > div:last-child, .profile > div:last-child, .nav-main span:nth-child(2), .nav-arrow, .subnav, .sidebar-foot { display: none; }
+            .profile, .nav-main { justify-content: center; }
+            .top-search { display: none; }
+        }
+        @media (max-width: 760px) {
+            .app { display: block; }
+            .sidebar { display: none; }
+            main { padding: 20px 14px; }
+            .topbar { padding: 0 16px; }
+            .page-head, .workspace-head { align-items: flex-start; flex-direction: column; }
+            .stats { grid-template-columns: 1fr 1fr; }
+            .workspace-tools { width: 100%; }
+            .search { min-width: 0; flex: 1; }
+            .form-grid { grid-template-columns: 1fr; }
+            .field.full { grid-column: auto; }
+        }
+    </style>
+</head>
+<body>
+<div class="app">
+    <aside class="sidebar">
+        <div class="logo"><div class="logo-mark">⌘</div><div><strong>DevSync</strong><small>IT GROUPWARE</small></div></div>
+        <div class="profile"><div class="avatar">정</div><div><strong>정다빈</strong><small>관리자</small></div></div>
+        <nav class="nav">
+            <div class="nav-group"><button class="nav-main"><span class="nav-icon">◷</span><span>근무 관리</span><span class="nav-arrow">⌄</span></button></div>
+            <div class="nav-group"><button class="nav-main"><span class="nav-icon">☂</span><span>휴가 관리</span><span class="nav-arrow">⌄</span></button></div>
+            <div class="nav-group"><button class="nav-main"><span class="nav-icon">▣</span><span>일정/공유</span><span class="nav-arrow">⌄</span></button></div>
+            <div class="nav-group"><button class="nav-main"><span class="nav-icon">▦</span><span>프로젝트/사업</span><span class="nav-arrow">⌄</span></button></div>
+            <div class="nav-group open">
+                <button class="nav-main"><span class="nav-icon">▤</span><span>회사 관리</span><span class="nav-arrow">⌃</span></button>
+                <div class="subnav"><a class="active" href="#">조직 관리</a><a href="#">사용자 관리</a></div>
+            </div>
+            <div class="nav-group"><button class="nav-main"><span class="nav-icon">▱</span><span>인프라/총무</span><span class="nav-arrow">⌄</span></button></div>
+            <div class="nav-group"><button class="nav-main"><span class="nav-icon">₩</span><span>비용/회계</span><span class="nav-arrow">⌄</span></button></div>
+        </nav>
+        <div class="sidebar-foot">Server: <span style="color:#34d399;font-weight:800">Stable</span></div>
+    </aside>
+
+    <section class="shell">
+        <header class="topbar"><h2>조직 관리</h2><div class="top-search">⌕　프로젝트, 마일스톤, 문서 통합 검색</div><div class="top-user"><span>●</span><strong>정다빈</strong><span>↪</span></div></header>
+        <main>
+            <div class="breadcrumb">회사 관리　›　조직 관리</div>
+            <div class="page-head">
+                <div><h1>조직 관리</h1><p>전체 업무영역을 하나의 조직도로 사용하는 단일 화면 시안입니다.</p></div>
+                <div class="actions"><button class="btn" id="expandAllBtn">전체 접기</button><button class="btn primary" id="globalAddBtn">＋ 조직 추가</button></div>
+            </div>
+
+            <section class="stats">
+                <div class="stat"><span>회사</span><strong>TR솔루션</strong><em>사용 중</em></div>
+                <div class="stat"><span>운영 조직</span><strong id="orgCount">0</strong><em>본부 · 부서 · 팀</em></div>
+                <div class="stat"><span>전체 구성원</span><strong id="memberCount">0명</strong><em>재직 사용자 기준</em></div>
+                <div class="stat"><span>미배정 사용자</span><strong>2명</strong><em style="color:#fbbf24">조직 배정 필요</em></div>
+            </section>
+
+            <section class="workspace">
+                <header class="workspace-head">
+                    <div><h3>전체 조직도</h3><p>조직 카드 자체에서 탐색·추가·상세관리를 수행합니다.</p></div>
+                    <div class="workspace-tools"><input class="search" id="orgSearch" type="search" placeholder="조직명 또는 코드 검색"><button class="btn" id="resetViewBtn">⌂ 전체 보기</button></div>
+                </header>
+                <div class="guide">
+                    <span><i class="dot"></i><b>카드 클릭</b> 하위 조직 펼치기/접기</span>
+                    <span><i class="dot"></i><b>▼</b> 카드 클릭과 동일하게 펼치기/접기</span>
+                    <span><i class="dot"></i><b>＋</b> 하위 조직 추가</span>
+                    <span><i class="dot"></i><b>상세</b> 조직정보·수정·삭제 모달 열기</span>
+                </div>
+                <div class="chart-scroll"><div class="chart" id="chart"></div></div>
+            </section>
+        </main>
+    </section>
+</div>
+
+<div class="modal" id="detailModal" aria-hidden="true">
+    <section class="modal-panel detail-modal-panel" role="dialog" aria-modal="true" aria-labelledby="detailTitle">
+        <header class="modal-head"><div><h3 id="detailTitle">조직 상세</h3><p>선택한 조직의 기본정보입니다.</p></div><button class="icon-btn" data-close="detailModal">✕</button></header>
+        <div class="modal-body" id="detailBody"></div>
+        <footer class="modal-foot"><button type="button" class="btn danger" id="detailDeleteBtn">삭제</button><button type="button" class="btn" data-close="detailModal">닫기</button><button type="button" class="btn primary" id="detailEditBtn">수정</button></footer>
+    </section>
+</div>
+
+<div class="modal" id="orgModal" aria-hidden="true">
+    <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <header class="modal-head"><div><h3 id="modalTitle">조직 추가</h3><p id="modalDesc">선택한 조직의 하위 조직을 등록합니다.</p></div><button class="icon-btn" data-close="orgModal">✕</button></header>
+        <form id="orgForm" novalidate>
+            <div class="modal-body">
+                <div class="form-grid">
+                    <div class="field"><label class="field-label" for="orgType">조직 구분 <em>*</em></label><select class="input" id="orgType" required><option value="HQ">본부</option><option value="DEPT">부서</option><option value="TEAM">팀</option></select><div class="field-message"></div></div>
+                    <div class="field"><label class="field-label" for="parentId">상위 조직 <em>*</em></label><select class="input" id="parentId" required></select><div class="field-message"></div></div>
+                    <div class="field"><label class="field-label" for="orgName">조직명 <em>*</em></label><input class="input" id="orgName" maxlength="40" placeholder="예: 플랫폼개발팀" required><div class="field-message" id="orgNameError"></div></div>
+                    <div class="field"><label class="field-label" for="orgCode">조직 코드 <em>*</em><span class="label-help">영문 대문자·숫자·하이픈 2~20자</span></label><input class="input" id="orgCode" maxlength="20" placeholder="예: DEV-PLAT" required><div class="field-message" id="orgCodeError"></div></div>
+                    <div class="field"><label class="field-label" for="leaderName">조직장</label><input class="input" id="leaderName" placeholder="사용자 선택 기능 연동 예정"><div class="field-message"></div></div>
+                    <div class="field"><label class="field-label" for="sortOrder">정렬 순서</label><input class="input" id="sortOrder" type="number" min="1" value="1"><div class="field-message"></div></div>
+                    <div class="field full"><label class="field-label" for="orgDesc">설명</label><textarea class="input" id="orgDesc" maxlength="200" placeholder="조직의 역할이나 담당 업무를 입력합니다."></textarea><div class="field-message"></div></div>
+                </div>
+            </div>
+            <footer class="modal-foot"><button type="button" class="btn" data-close="orgModal">취소</button><button type="submit" class="btn primary">저장</button></footer>
+        </form>
+    </section>
+</div>
+
+<div class="toast" id="toast"><span id="toastIcon" style="color:#34d399">●</span><span id="toastText"></span></div>
+
+<script>
+    (function () {
+        'use strict';
+        var typeLabels = { COMPANY: '회사', HQ: '본부', DEPT: '부서', TEAM: '팀' };
+        var nodes = [
+            { id:'company', parent:null, type:'COMPANY', name:'TR솔루션', code:'TRS', leader:'김대표', members:0, desc:'IT 개발과 스마트 솔루션을 제공하는 회사입니다.' },
+            { id:'hq-mgmt', parent:'company', type:'HQ', name:'경영지원본부', code:'HQ-MGT', leader:'박서현', members:3, desc:'경영기획과 운영 지원 업무를 총괄합니다.' },
+            { id:'d-plan', parent:'hq-mgmt', type:'DEPT', name:'경영기획부', code:'MGT-PLAN', leader:'박서현', members:3, desc:'사업계획과 경영관리 업무를 담당합니다.' },
+            { id:'d-fin', parent:'hq-mgmt', type:'DEPT', name:'재무회계부', code:'MGT-FIN', leader:'이수정', members:4, desc:'회계, 세무, 자금 업무를 담당합니다.' },
+            { id:'d-hr', parent:'hq-mgmt', type:'DEPT', name:'인사총무부', code:'MGT-HR', leader:'최유진', members:5, desc:'인사 운영과 총무 업무를 담당합니다.' },
+            { id:'hq-biz', parent:'company', type:'HQ', name:'사업본부', code:'HQ-BIZ', leader:'강민호', members:2, desc:'공공 및 민간 사업을 기획하고 수행합니다.' },
+            { id:'d-public', parent:'hq-biz', type:'DEPT', name:'공공사업부', code:'BIZ-PUB', leader:'강민호', members:6, desc:'공공기관 SI 및 운영 사업을 담당합니다.' },
+            { id:'t-tbn', parent:'d-public', type:'TEAM', name:'TBN사업팀', code:'PUB-TBN', leader:'정다빈', members:4, desc:'TBN 제보접수 및 연계 시스템을 담당합니다.' },
+            { id:'t-data', parent:'d-public', type:'TEAM', name:'데이터사업팀', code:'PUB-DATA', leader:'한지훈', members:5, desc:'교통 데이터 플랫폼 사업을 담당합니다.' },
+            { id:'d-private', parent:'hq-biz', type:'DEPT', name:'민간사업부', code:'BIZ-PRI', leader:'오세진', members:5, desc:'민간 고객 사업을 담당합니다.' },
+            { id:'hq-dev', parent:'company', type:'HQ', name:'기술개발본부', code:'HQ-DEV', leader:'윤태경', members:2, desc:'서비스 개발과 기술 품질을 총괄합니다.' },
+            { id:'d-web', parent:'hq-dev', type:'DEPT', name:'웹개발부', code:'DEV-WEB', leader:'윤태경', members:8, desc:'전자정부프레임워크 기반 웹 서비스 개발을 담당합니다.' },
+            { id:'t-back', parent:'d-web', type:'TEAM', name:'백엔드팀', code:'WEB-BE', leader:'정다빈', members:4, desc:'Java, Spring, DB 중심의 서버 개발을 담당합니다.' },
+            { id:'t-front', parent:'d-web', type:'TEAM', name:'프론트엔드팀', code:'WEB-FE', leader:'김도윤', members:4, desc:'웹 UI와 사용자 경험 개발을 담당합니다.' },
+            { id:'d-solution', parent:'hq-dev', type:'DEPT', name:'솔루션개발부', code:'DEV-SOL', leader:'서예린', members:7, desc:'사내 제품과 연계 솔루션을 개발합니다.' },
+            { id:'t-platform', parent:'d-solution', type:'TEAM', name:'플랫폼팀', code:'SOL-PLT', leader:'서예린', members:4, desc:'공통 플랫폼과 API를 개발합니다.' },
+            { id:'d-qa', parent:'hq-dev', type:'DEPT', name:'품질관리부', code:'DEV-QA', leader:'문하늘', members:4, desc:'테스트와 개발 품질 기준을 관리합니다.' }
+        ];
+        var selectedId = 'company';
+        var detailId = null;
+        var editingId = null;
+        var modalMode = 'add';
+        var expanded = new Set(nodes.map(function (node) { return node.id; }));
+        var toastTimer = null;
+
+        function byId(id) { return nodes.find(function (node) { return node.id === id; }); }
+        function childrenOf(id) { return nodes.filter(function (node) { return node.parent === id; }); }
+        function html(value) { return String(value == null ? '' : value).replace(/[&<>\'\"]/g, function (char) { return ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'})[char]; }); }
+        function pathOf(node) { var path = []; var current = node; while (current) { path.unshift(current.name); current = current.parent ? byId(current.parent) : null; } return path.join(' > '); }
+        function totalMembers() { return nodes.filter(function (node) { return node.type === 'TEAM' || (node.type === 'DEPT' && !childrenOf(node.id).length); }).reduce(function (sum, node) { return sum + Number(node.members || 0); }, 0); }
+        function allowedTypes(parent) { if (!parent) return []; if (parent.type === 'COMPANY') return ['HQ', 'DEPT']; if (parent.type === 'HQ') return ['DEPT']; if (parent.type === 'DEPT') return ['TEAM']; return []; }
+        function searchKeyword() { return document.getElementById('orgSearch').value.trim().toLowerCase(); }
+        function visibleForSearch(node, keyword) {
+            if (!keyword || (node.name + ' ' + node.code).toLowerCase().indexOf(keyword) >= 0) return true;
+            return childrenOf(node.id).some(function (child) { return visibleForSearch(child, keyword); });
+        }
+
+        function renderStats() {
+            document.getElementById('orgCount').textContent = String(nodes.length - 1);
+            document.getElementById('memberCount').textContent = totalMembers() + '명';
+        }
+
+        function card(node, css) {
+            var children = childrenOf(node.id);
+            var canAdd = node.type !== 'TEAM';
+            return '<article class="org-card ' + (css || '') + (selectedId === node.id ? ' selected' : '') + '" data-card="' + html(node.id) + '" data-name="' + html((node.name + ' ' + node.code).toLowerCase()) + '">'
+                + '<span class="type-badge">' + typeLabels[node.type] + '</span><strong>' + html(node.name) + '</strong><small>' + html(node.leader || '조직장 미지정') + ' · ' + Number(node.members || 0) + '명</small>'
+                + '<div class="card-actions">'
+                + (canAdd ? '<button type="button" class="card-btn" data-add="' + html(node.id) + '" title="하위 조직 추가" aria-label="' + html(node.name) + ' 하위 조직 추가">＋</button>' : '')
+                + (children.length ? '<button type="button" class="card-btn toggle" data-toggle="' + html(node.id) + '" title="하위 조직 펼치기/접기" aria-label="' + html(node.name) + ' 하위 조직 펼치기/접기" aria-expanded="' + (expanded.has(node.id) ? 'true' : 'false') + '">▼</button>' : '')
+                + '</div>'
+                + (node.type === 'COMPANY' ? '' : '<button type="button" class="card-detail" data-detail="' + html(node.id) + '">상세</button>') + '</article>';
+        }
+
+        function nestedChildren(parentId, depth, keyword) {
+            var children = childrenOf(parentId).filter(function (child) { return visibleForSearch(child, keyword); });
+            if (!children.length) return '';
+            var hidden = keyword || expanded.has(parentId) ? '' : ' hidden';
+            return '<div class="' + (depth === 0 ? 'branch-body' : 'nested') + hidden + '">' + children.map(function (child) {
+                return '<div class="child-node">' + card(child, '') + nestedChildren(child.id, depth + 1, keyword) + '</div>';
+            }).join('') + '</div>';
+        }
+
+        function renderChart() {
+            var company = byId('company');
+            var keyword = searchKeyword();
+            var top = childrenOf('company').filter(function (node) { return visibleForSearch(node, keyword); });
+            var columns = Math.max(top.length, 1);
+            var chart = '<div class="root-wrap' + (top.length ? ' has-children' : '') + '">' + card(company, 'root-card') + '</div>';
+            if (top.length && (keyword || expanded.has('company'))) {
+                chart += '<div class="branches" style="--edge:' + (50 / columns) + '%;grid-template-columns:repeat(' + columns + ',minmax(235px,1fr))">' + top.map(function (node) {
+                    return '<section class="branch">' + card(node, '') + nestedChildren(node.id, 0, keyword) + '</section>';
+                }).join('') + '</div>';
+            } else if (!top.length && keyword) {
+                chart += '<div class="empty">검색 조건에 맞는 조직이 없습니다.</div>';
+            } else if (!top.length) {
+                chart += '<div class="empty">등록된 조직이 없습니다. 조직 추가 버튼으로 시작해 주세요.</div>';
+            }
+            document.getElementById('chart').innerHTML = chart;
+        }
+
+        function toggleNode(id) {
+            selectedId = id;
+            if (childrenOf(id).length) {
+                if (expanded.has(id)) expanded.delete(id); else expanded.add(id);
+            }
+            renderChart();
+        }
+
+        function openDetail(id) {
+            var node = byId(id);
+            if (!node) return;
+            detailId = id;
+            selectedId = id;
+            document.getElementById('detailBody').innerHTML = '<div class="detail-title"><span class="type-badge">' + typeLabels[node.type] + '</span><h4>' + html(node.name) + '</h4><p>' + html(node.desc || '등록된 조직 설명이 없습니다.') + '</p></div>'
+                + '<dl class="kv"><dt>조직 코드</dt><dd>' + html(node.code) + '</dd><dt>상위 조직</dt><dd>' + html(node.parent ? byId(node.parent).name : '-') + '</dd><dt>전체 경로</dt><dd>' + html(pathOf(node)) + '</dd><dt>조직장</dt><dd>' + html(node.leader || '미지정') + '</dd><dt>소속 구성원</dt><dd>' + Number(node.members || 0) + '명</dd><dt>하위 조직</dt><dd>' + childrenOf(node.id).length + '개</dd></dl>'
+                + '<div class="member-note">카드 본문이나 <b>▼</b> 버튼은 하위 조직을 펼치고 접습니다. 카드 우측 하단의 <b>상세</b> 링크로 이 창을 엽니다.</div>';
+            var immutable = node.type === 'COMPANY';
+            document.getElementById('detailEditBtn').disabled = immutable;
+            document.getElementById('detailDeleteBtn').disabled = immutable;
+            openModal('detailModal');
+            renderChart();
+        }
+
+        function fillParentOptions(preferredId) {
+            var type = document.getElementById('orgType').value;
+            var candidates = nodes.filter(function (node) {
+                return (type === 'HQ' && node.type === 'COMPANY') || (type === 'DEPT' && (node.type === 'COMPANY' || node.type === 'HQ')) || (type === 'TEAM' && node.type === 'DEPT');
+            });
+            var select = document.getElementById('parentId');
+            select.innerHTML = candidates.map(function (node) { return '<option value="' + html(node.id) + '">' + html(pathOf(node)) + '</option>'; }).join('');
+            if (preferredId && candidates.some(function (node) { return node.id === preferredId; })) select.value = preferredId;
+        }
+
+        function clearErrors() {
+            ['orgName', 'orgCode'].forEach(function (id) { document.getElementById(id).classList.remove('invalid'); document.getElementById(id + 'Error').textContent = ''; });
+        }
+
+        function openAdd(parentId, global) {
+            var parent = byId(parentId || 'company') || byId('company');
+            var types = global ? ['HQ', 'DEPT', 'TEAM'] : allowedTypes(parent);
+            if (!types.length) { showToast('팀 아래에는 하위 조직을 추가할 수 없습니다.', true); return; }
+            modalMode = 'add'; editingId = null; clearErrors();
+            document.getElementById('modalTitle').textContent = global ? '조직 추가' : '하위 조직 추가';
+            document.getElementById('modalDesc').textContent = global ? '조직 구분과 상위 조직을 선택해 등록합니다.' : parent.name + ' 아래에 새 조직을 등록합니다.';
+            document.getElementById('orgForm').reset();
+            var typeSelect = document.getElementById('orgType');
+            Array.prototype.forEach.call(typeSelect.options, function (option) { option.disabled = types.indexOf(option.value) < 0; });
+            typeSelect.disabled = false; typeSelect.value = types[0];
+            fillParentOptions(global ? null : parent.id);
+            document.getElementById('sortOrder').value = String(childrenOf(parent.id).length + 1);
+            openModal('orgModal');
+        }
+
+        function openEdit(id) {
+            var node = byId(id);
+            if (!node || node.type === 'COMPANY') return;
+            closeModal('detailModal');
+            modalMode = 'edit'; editingId = id; clearErrors();
+            document.getElementById('modalTitle').textContent = '조직 수정';
+            document.getElementById('modalDesc').textContent = node.name + ' 조직의 기본정보를 수정합니다.';
+            var typeSelect = document.getElementById('orgType');
+            Array.prototype.forEach.call(typeSelect.options, function (option) { option.disabled = false; });
+            typeSelect.value = node.type; typeSelect.disabled = true;
+            fillParentOptions(node.parent);
+            document.getElementById('orgName').value = node.name;
+            document.getElementById('orgCode').value = node.code;
+            document.getElementById('leaderName').value = node.leader || '';
+            document.getElementById('sortOrder').value = '1';
+            document.getElementById('orgDesc').value = node.desc || '';
+            openModal('orgModal');
+        }
+
+        function validateForm() {
+            clearErrors();
+            var valid = true;
+            var name = document.getElementById('orgName').value.trim();
+            var code = document.getElementById('orgCode').value.trim().toUpperCase();
+            if (!name) { setFieldError('orgName', '조직명을 입력해 주세요.'); valid = false; }
+            if (!/^[A-Z0-9-]{2,20}$/.test(code)) { setFieldError('orgCode', '영문 대문자, 숫자, 하이픈 2~20자로 입력해 주세요.'); valid = false; }
+            else if (nodes.some(function (node) { return node.code === code && node.id !== editingId; })) { setFieldError('orgCode', '이미 사용 중인 조직 코드입니다.'); valid = false; }
+            return valid;
+        }
+
+        function setFieldError(id, message) {
+            document.getElementById(id).classList.add('invalid');
+            document.getElementById(id + 'Error').textContent = message;
+        }
+
+        function saveOrg(event) {
+            event.preventDefault();
+            if (!validateForm()) return;
+            var type = document.getElementById('orgType').value;
+            var parent = document.getElementById('parentId').value;
+            var name = document.getElementById('orgName').value.trim();
+            var code = document.getElementById('orgCode').value.trim().toUpperCase();
+            if (modalMode === 'edit') {
+                var node = byId(editingId);
+                node.parent = parent; node.name = name; node.code = code; node.leader = document.getElementById('leaderName').value.trim(); node.desc = document.getElementById('orgDesc').value.trim();
+                selectedId = node.id; showToast(name + ' 조직 정보를 수정했습니다.');
+            } else {
+                var id = 'org-' + Date.now();
+                nodes.push({ id:id, parent:parent, type:type, name:name, code:code, leader:document.getElementById('leaderName').value.trim(), members:0, desc:document.getElementById('orgDesc').value.trim() });
+                expanded.add(parent); expanded.add(id); selectedId = id; showToast(name + ' 조직을 추가했습니다.');
+            }
+            closeModal('orgModal'); renderStats(); renderChart();
+        }
+
+        function deleteOrg(id) {
+            var node = byId(id);
+            if (!node || node.type === 'COMPANY') return;
+            var childCount = childrenOf(id).length;
+            if (childCount) { showToast('하위 조직 ' + childCount + '개가 있어 삭제할 수 없습니다.', true); return; }
+            if (Number(node.members) > 0) { showToast('소속 구성원 ' + node.members + '명이 있어 삭제할 수 없습니다.', true); return; }
+            if (!window.confirm(node.name + ' 조직을 삭제하시겠습니까?')) return;
+            nodes.splice(nodes.findIndex(function (item) { return item.id === id; }), 1);
+            closeModal('detailModal'); selectedId = node.parent || 'company'; renderStats(); renderChart(); showToast(node.name + ' 조직을 삭제했습니다.');
+        }
+
+        function openModal(id) { var modal = document.getElementById(id); modal.classList.add('open'); modal.setAttribute('aria-hidden', 'false'); if (id === 'orgModal') setTimeout(function () { document.getElementById('orgName').focus(); }, 20); }
+        function closeModal(id) { var modal = document.getElementById(id); modal.classList.remove('open'); modal.setAttribute('aria-hidden', 'true'); if (id === 'orgModal') document.getElementById('orgType').disabled = false; }
+        function showToast(message, error) { var toast = document.getElementById('toast'); document.getElementById('toastText').textContent = message; document.getElementById('toastIcon').style.color = error ? '#fb7185' : '#34d399'; toast.classList.toggle('error', !!error); toast.classList.add('show'); window.clearTimeout(toastTimer); toastTimer = window.setTimeout(function () { toast.classList.remove('show'); }, 3400); }
+
+        document.addEventListener('click', function (event) {
+            var add = event.target.closest('[data-add]');
+            if (add) { event.stopPropagation(); openAdd(add.getAttribute('data-add'), false); return; }
+            var toggle = event.target.closest('[data-toggle]');
+            if (toggle) { event.stopPropagation(); toggleNode(toggle.getAttribute('data-toggle')); return; }
+            var detail = event.target.closest('[data-detail]');
+            if (detail) { event.stopPropagation(); openDetail(detail.getAttribute('data-detail')); return; }
+            var close = event.target.closest('[data-close]');
+            if (close) { closeModal(close.getAttribute('data-close')); return; }
+            var cardElement = event.target.closest('[data-card]');
+            if (cardElement) {
+                toggleNode(cardElement.getAttribute('data-card'));
+            }
+        });
+
+        document.querySelectorAll('.modal').forEach(function (modal) { modal.addEventListener('mousedown', function (event) { if (event.target === modal) closeModal(modal.id); }); });
+        document.addEventListener('keydown', function (event) { if (event.key === 'Escape') { closeModal('orgModal'); closeModal('detailModal'); } });
+        document.getElementById('orgType').addEventListener('change', function () { fillParentOptions(); });
+        document.getElementById('orgCode').addEventListener('input', function () { this.value = this.value.toUpperCase().replace(/[^A-Z0-9-]/g, ''); clearErrors(); });
+        document.getElementById('orgName').addEventListener('input', clearErrors);
+        document.getElementById('orgForm').addEventListener('submit', saveOrg);
+        document.getElementById('globalAddBtn').addEventListener('click', function () { openAdd('company', true); });
+        document.getElementById('detailEditBtn').addEventListener('click', function () { openEdit(detailId); });
+        document.getElementById('detailDeleteBtn').addEventListener('click', function () { deleteOrg(detailId); });
+        document.getElementById('orgSearch').addEventListener('input', renderChart);
+        document.getElementById('resetViewBtn').addEventListener('click', function () { document.getElementById('orgSearch').value = ''; selectedId = 'company'; expanded = new Set(nodes.map(function (node) { return node.id; })); renderChart(); document.querySelector('.chart-scroll').scrollTo({ left:0, top:0, behavior:'smooth' }); });
+        document.getElementById('expandAllBtn').addEventListener('click', function (event) { var allOpen = nodes.every(function (node) { return expanded.has(node.id); }); expanded = allOpen ? new Set(['company']) : new Set(nodes.map(function (node) { return node.id; })); event.currentTarget.textContent = allOpen ? '전체 펼치기' : '전체 접기'; renderChart(); });
+
+        renderStats(); renderChart();
+    })();
+</script>
+</body>
+</html>

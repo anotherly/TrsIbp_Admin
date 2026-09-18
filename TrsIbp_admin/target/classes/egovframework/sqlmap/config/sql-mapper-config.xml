@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE configuration PUBLIC "-//mybatis.org//DTD Config 3.0//EN" "http://mybatis.org/dtd/mybatis-3-config.dtd">
+
+<configuration>
+    <!-- VO 타입 별칭 설정 (mapper.xml의 parameterType/resultType에서 짧게 사용) -->
+    <typeAliases>
+        <!-- 사용자 -->
+        <typeAlias alias="userVO"   type="kr.co.TRSolution.trsIbp.user.vo.UserVO"/>
+        <!-- 부서 -->
+        <typeAlias alias="deptVO"   type="kr.co.TRSolution.trsIbp.dept.vo.DeptVO"/>
+        <!-- 회사 -->
+        <typeAlias alias="companyVO"   type="kr.co.TRSolution.trsIbp.company.vo.CompanyVO"/>
+        <!-- 근태관리 -->
+        <typeAlias alias="attendVO" type="kr.co.TRSolution.trsIbp.attend.vo.AttendVO" />
+        <!-- 사업관리 -->
+        <typeAlias alias="bizVO" type="kr.co.TRSolution.trsIbp.biz.vo.BizVO" />
+        <!-- 공통코드 -->
+        <typeAlias alias="commCdVO" type="kr.co.TRSolution.trsIbp.comm.vo.CommCdVO" />
+        <!-- 시스템관리자 -->
+        <typeAlias alias="adminVO" type="kr.co.TRSolution.trsIbp.admin.vo.AdminVO" />
+    </typeAliases>
+
+    <!--
+        mapper.xml 위치는 context-mapper.xml의 mapperLocations에서 일괄 등록
+        classpath:/egovframework/sqlmap/mappers/*.xml
+        → userMapper.xml, attendMapper.xml 등 자동 포함
+    -->
+</configuration>

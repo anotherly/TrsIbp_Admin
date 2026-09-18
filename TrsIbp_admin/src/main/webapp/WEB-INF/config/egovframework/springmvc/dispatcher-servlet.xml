@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" 
+    	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xmlns:p="http://www.springframework.org/schema/p"
+        xmlns:context="http://www.springframework.org/schema/context"
+        xmlns:mvc="http://www.springframework.org/schema/mvc"
+        xmlns:task="http://www.springframework.org/schema/task"
+        xsi:schemaLocation="http://www.springframework.org/schema/beans 
+        		http://www.springframework.org/schema/beans/spring-beans-4.0.xsd
+                http://www.springframework.org/schema/context 
+                http://www.springframework.org/schema/context/spring-context-4.0.xsd
+                http://www.springframework.org/schema/mvc 
+                http://www.springframework.org/schema/mvc/spring-mvc-4.0.xsd
+                http://www.springframework.org/schema/task 
+                http://www.springframework.org/schema/task/spring-task-4.0.xsd ">
+
+    <context:annotation-config/>
+    <!-- 이거없으면 컨트롤러에서 리퀘스트 매핑 안탐 -->
+	<mvc:annotation-driven/>
+    <!-- 컴포넌트 스캔 (Controller / Service / Repository 자동 등록) -->
+	<context:component-scan base-package="kr.co.TRSolution">
+	    <context:include-filter type="annotation" expression="org.springframework.stereotype.Controller"/>
+	    <context:include-filter type="annotation" expression="org.springframework.stereotype.Service"/>
+	    <context:include-filter type="annotation" expression="org.springframework.stereotype.Repository"/>
+	</context:component-scan>
+
+    <!-- ============================================================ -->
+    <!--  인터셉터 설정                                                  -->
+    <!-- ============================================================ -->
+
+    <!-- 1. 로그인/로그아웃 처리 인터셉터 (LoginInterceptor)
+         - /user/loginAction.do : 로그인 처리 (preHandle: 기존세션제거, postHandle: 세션저장+이력기록)
+         - /login/logout.do      : 로그아웃 처리 (preHandle: 세션제거)
+    -->
+    <bean id="loginInterceptor" class="kr.co.TRSolution.trsIbp.comm.LoginInterceptor"/>
+
+    <!-- 2. 세션 체크 인터셉터 (미로그인 시 login.do로 리다이렉트)
+         - 대부분의 .do, .ajax URL에 적용
+         - 로그인/로그아웃/정적 리소스 URL은 제외
+    -->
+    <bean id="sessionCheckInterceptor" class="kr.co.TRSolution.trsIbp.comm.SessionCheckInterceptor"/>
+    <bean id="authInterceptor" class="kr.co.TRSolution.trsIbp.comm.AuthInterceptor"/>
+
+    <mvc:interceptors>
+        <!-- 로케일 변경 인터셉터 (eGov 표준) -->
+        <mvc:interceptor>
+            <mvc:mapping path="/**"/>
+            <bean class="org.springframework.web.servlet.i18n.LocaleChangeInterceptor">
+                <property name="paramName" value="language"/>
+            </bean>
+        </mvc:interceptor>
+
+        <!-- 로그인/로그아웃 인터셉터 -->
+        <mvc:interceptor>
+            <mvc:mapping path="/login/loginAction.do"/>
+            <mvc:mapping path="/login/logout.do"/>
+            <ref bean="loginInterceptor"/>
+        </mvc:interceptor>
+
+        <!-- 세션 체크 인터셉터 (로그인 필요 URL에만 적용) -->
+        <mvc:interceptor>
+            <mvc:mapping path="/**/*.do"/>
+            <mvc:mapping path="/**/*.ajax"/>
+            <!-- 관리자 로그인 화면과 처리만 공개. 가입/기업신청 URL은 공개하지 않는다. -->
+            <mvc:exclude-mapping path="/login/login.do"/>
+            <mvc:exclude-mapping path="/login/loginAction.do"/>
+            <mvc:exclude-mapping path="/login/logout.do"/>
+            <mvc:exclude-mapping path="/cmmn/**"/>
+            <ref bean="sessionCheckInterceptor"/>
+        </mvc:interceptor>
+
+        <!-- DB 메뉴 권한: 화면 숨김과 별도로 .do/.ajax 직접 접근을 차단 -->
+        <mvc:interceptor>
+            <mvc:mapping path="/**/*.do"/>
+            <mvc:mapping path="/**/*.ajax"/>
+            <mvc:exclude-mapping path="/login/login.do"/>
+            <mvc:exclude-mapping path="/login/loginAction.do"/>
+            <mvc:exclude-mapping path="/login/logout.do"/>
+            <mvc:exclude-mapping path="/cmmn/**"/>
+            <ref bean="authInterceptor"/>
+        </mvc:interceptor>
+    </mvc:interceptors>
+
+    <!-- ============================================================ -->
+    <!--  로케일                                                        -->
+    <!-- ============================================================ -->
+    <bean id="localeResolver" class="org.springframework.web.servlet.i18n.SessionLocaleResolver"/>
+
+    <!-- ============================================================ -->
+    <!--  예외 처리                                                     -->
+    <!-- ============================================================ -->
+    <bean class="org.springframework.web.servlet.handler.SimpleMappingExceptionResolver">
+        <property name="defaultErrorView" value="cmmn/egovError"/>
+        <property name="exceptionMappings">
+            <props>
+                <prop key="org.springframework.dao.DataAccessException">cmmn/dataAccessFailure</prop>
+                <prop key="org.springframework.transaction.TransactionException">cmmn/transactionFailure</prop>
+                <prop key="egovframework.rte.fdl.cmmn.exception.EgovBizException">cmmn/egovError</prop>
+                <prop key="org.springframework.security.AccessDeniedException">cmmn/egovError</prop>
+            </props>
+        </property>
+    </bean>
+
+    <!-- ============================================================ -->
+    <!--  뷰 리졸버 (JSP: /WEB-INF/jsp/)                               -->
+    <!-- ============================================================ -->
+    <bean class="org.springframework.web.servlet.view.UrlBasedViewResolver" p:order="1"
+        p:viewClass="org.springframework.web.servlet.view.JstlView"
+        p:prefix="/WEB-INF/jsp/" p:suffix=".jsp"/>
+
+    <!-- ============================================================ -->
+    <!--  파일 업로드                                                   -->
+    <!-- ============================================================ -->
+    <bean id="multipartResolver" class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
+        <property name="defaultEncoding" value="UTF-8"/>
+        <property name="maxUploadSize" value="52428800"/><!-- 50MB -->
+    </bean>
+
+    <!-- ============================================================ -->
+    <!--  스케줄러 (새벽 3시 비정상 접속 정리)                           -->
+    <!-- ============================================================ -->
+    <task:scheduler id="myScheduler" pool-size="10"/>
+    <task:scheduled-tasks scheduler="myScheduler">
+        <task:scheduled ref="ClientChkScheduler" method="clientAutoChk" cron="0 0 3 * * *"/>
+    </task:scheduled-tasks>
+    <bean id="ClientChkScheduler" class="kr.co.TRSolution.trsIbp.comm.ClientChkScheduler"/>
+
+    <!-- ============================================================ -->
+    <!--  JSON 뷰 (Ajax 응답용)                                         -->
+    <!-- ============================================================ -->
+    <bean class="org.springframework.web.servlet.view.BeanNameViewResolver">
+        <property name="order" value="0"/>
+    </bean>
+    <bean class="org.springframework.web.servlet.view.json.MappingJackson2JsonView" id="jsonView">
+        <property name="contentType" value="application/json;charset=UTF-8"/>
+    </bean>
+
+    <mvc:view-controller path="/cmmn/validator.do" view-name="cmmn/validator"/>
+
+</beans>

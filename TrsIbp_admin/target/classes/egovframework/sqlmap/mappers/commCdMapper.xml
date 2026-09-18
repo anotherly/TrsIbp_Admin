@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.TRSolution.trsIbp.comm.mapper.CommCdMapper">
+
+    <resultMap id="commCdResultMap" type="commCdVO">
+        <result property="cdGroupId" column="CD_GROUP_ID"/>
+        <result property="cdGroupNm" column="CD_GROUP_NM"/>
+        <result property="cd" column="CD"/>
+        <result property="cdNm" column="CD_NM"/>
+        <result property="cdExpln" column="CD_EXPLN"/>
+        <result property="sortSeq" column="SORT_SEQ"/>
+        <result property="dfltYn" column="DFLT_YN"/>
+        <result property="useYn" column="USE_YN"/>
+        <result property="rmrkCn" column="RMRK_CN"/>
+    </resultMap>
+
+    <select id="selectCommCdList" parameterType="commCdVO" resultMap="commCdResultMap">
+        SELECT
+             G.CD_GROUP_ID
+            ,G.CD_GROUP_NM
+            ,C.CD
+            ,C.CD_NM
+            ,C.CD_EXPLN
+            ,C.SORT_SEQ
+            ,C.DFLT_YN
+            ,C.USE_YN
+            ,C.RMRK_CN
+        FROM cmn_cd_group G
+        INNER JOIN cmn_cd C
+            ON C.CD_GROUP_ID = G.CD_GROUP_ID
+        WHERE G.USE_YN = 'Y'
+          AND C.USE_YN = 'Y'
+        <if test="cdGroupId != null and cdGroupId != ''">
+          AND G.CD_GROUP_ID = #{cdGroupId}
+        </if>
+        <if test="cdGroupIdList != null and cdGroupIdList.size() > 0">
+          AND G.CD_GROUP_ID IN
+          <foreach collection="cdGroupIdList" item="item" open="(" separator="," close=")">
+              #{item}
+          </foreach>
+        </if>
+        ORDER BY G.SORT_SEQ ASC, G.CD_GROUP_ID ASC, C.SORT_SEQ ASC, C.CD ASC
+    </select>
+
+    <select id="selectDefaultCd" parameterType="commCdVO" resultType="string">
+        SELECT C.CD
+        FROM cmn_cd C
+        WHERE C.CD_GROUP_ID = #{cdGroupId}
+          AND C.USE_YN = 'Y'
+          AND C.DFLT_YN = 'Y'
+        ORDER BY C.SORT_SEQ ASC, C.CD ASC
+        LIMIT 1
+    </select>
+
+</mapper>

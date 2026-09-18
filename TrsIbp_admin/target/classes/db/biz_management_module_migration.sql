@@ -1,0 +1,146 @@
+/* =========================================================
+   TRS_IBP 사업관리 2.1~2.4 기능 추가 마이그레이션
+   - 기존 메소드명/패키지 유지
+   - 공통코드 테이블 기반 코드명 관리
+   - 적용 전 운영 DB 백업 권장
+   ========================================================= */
+
+/* 1. 공통코드 그룹/상세 추가 */
+INSERT IGNORE INTO cmn_cd_group (CD_GROUP_ID, CD_GROUP_NM, USE_YN, SORT_SEQ, RMRK_CN, REG_DT) VALUES
+('CUST_SE_CD', '고객구분코드', 'Y', 60, '공공/민간 고객사 구분', NOW()),
+('REL_SE_CD', '계약관계구분코드', 'Y', 70, '최종사용자, 1차계약자, 하도급, 우리회사 등 계약관계', NOW()),
+('INPUT_SE_CD', '투입구분코드', 'Y', 80, '정/부/계약직/외주 등 투입 형태', NOW()),
+('CST_SE_CD', '비용구분코드', 'Y', 90, '출장비, 숙박비, 식대, 회의비 등 직접비 구분', NOW()),
+('SCHDL_SE_CD', '일정구분코드', 'Y', 100, '사전작업, 수주, 종료, 유지보수 등 프로세스 일정', NOW());
+
+INSERT IGNORE INTO cmn_cd (CD_GROUP_ID, CD, CD_NM, CD_EXPLN, SORT_SEQ, DFLT_YN, USE_YN, REG_DT) VALUES
+('CUST_SE_CD', 'PBL', '공공', '공공기관/공공 발주처', 10, 'Y', 'Y', NOW()),
+('CUST_SE_CD', 'PRIVT', '민간', '민간기업/민간 발주처', 20, 'N', 'Y', NOW()),
+
+('REL_SE_CD', 'END_USER', '최종사용자(갑)', '실제 수요기관 또는 최종 사용자', 10, 'Y', 'Y', NOW()),
+('REL_SE_CD', 'PRIME_CTRTR', '1차계약자(을)', '최종사용자와 직접 계약한 원도급사', 20, 'N', 'Y', NOW()),
+('REL_SE_CD', 'SUB_CTRTR', '하도급', '하도급 또는 하도급 N차 수행사', 30, 'N', 'Y', NOW()),
+('REL_SE_CD', 'OUR_CO', '우리회사', '당사 계약/수행 위치', 40, 'N', 'Y', NOW()),
+('REL_SE_CD', 'ETC', '기타', '기타 계약 관계자', 90, 'N', 'Y', NOW()),
+
+('INPUT_SE_CD', 'MAIN', '정', '주 투입 인력', 10, 'Y', 'Y', NOW()),
+('INPUT_SE_CD', 'SUB', '부', '보조 투입 인력', 20, 'N', 'Y', NOW()),
+('INPUT_SE_CD', 'CNTR', '계약직', '계약직 투입 인력', 30, 'N', 'Y', NOW()),
+('INPUT_SE_CD', 'OUTSRC', '외주', '외주 또는 협력업체 인력', 40, 'N', 'Y', NOW()),
+('INPUT_SE_CD', 'ETC', '기타', '기타 투입 형태', 90, 'N', 'Y', NOW()),
+
+('CST_SE_CD', 'TRVL', '출장비', '출장 교통/일비 등', 10, 'Y', 'Y', NOW()),
+('CST_SE_CD', 'LODG', '숙박비', '출장/현장 숙박비', 20, 'N', 'Y', NOW()),
+('CST_SE_CD', 'MEAL', '식대', '식대', 30, 'N', 'Y', NOW()),
+('CST_SE_CD', 'MEET', '회의비', '회의비', 40, 'N', 'Y', NOW()),
+('CST_SE_CD', 'MTRL', '재료비', '장비/재료 구매비', 50, 'N', 'Y', NOW()),
+('CST_SE_CD', 'ETC', '기타', '기타 직접비', 90, 'N', 'Y', NOW()),
+
+('SCHDL_SE_CD', 'PRE', '사전작업', '제안/분석/착수 전 준비', 10, 'Y', 'Y', NOW()),
+('SCHDL_SE_CD', 'ORDER', '수주', '계약/수주 이후 주요 수행', 20, 'N', 'Y', NOW()),
+('SCHDL_SE_CD', 'END', '종료', '납품/검수/완료', 30, 'N', 'Y', NOW()),
+('SCHDL_SE_CD', 'FREE_MAINT', '무상유지보수', '무상 유지보수 기간 작업', 40, 'N', 'Y', NOW()),
+('SCHDL_SE_CD', 'PAID_MAINT', '유상유지보수', '유상 유지보수 기간 작업', 50, 'N', 'Y', NOW()),
+('SCHDL_SE_CD', 'ETC', '기타', '기타 일정', 90, 'N', 'Y', NOW());
+
+/* 2. 고객사 정보 */
+CREATE TABLE IF NOT EXISTS cust_info (
+    CUST_SN BIGINT NOT NULL AUTO_INCREMENT COMMENT '고객일련번호',
+    CUST_CO_NM VARCHAR(100) NOT NULL COMMENT '고객회사명',
+    CUST_SE_CD VARCHAR(30) DEFAULT NULL COMMENT '고객구분코드',
+    BRNO VARCHAR(20) DEFAULT NULL COMMENT '사업자등록번호',
+    RPRSV_NM VARCHAR(50) DEFAULT NULL COMMENT '대표자명',
+    TELNO VARCHAR(20) DEFAULT NULL COMMENT '전화번호',
+    ADDR VARCHAR(300) DEFAULT NULL COMMENT '주소',
+    DADDR VARCHAR(300) DEFAULT NULL COMMENT '상세주소',
+    RMRK_CN VARCHAR(1000) DEFAULT NULL COMMENT '비고내용',
+    USE_YN CHAR(1) NOT NULL DEFAULT 'Y' COMMENT '사용여부',
+    REG_DT DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '등록일시',
+    MDFCN_DT DATETIME DEFAULT NULL COMMENT '수정일시',
+    PRIMARY KEY (CUST_SN),
+    KEY IDX_CUST_INFO_NM (CUST_CO_NM),
+    KEY IDX_CUST_INFO_BRNO (BRNO)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='고객정보';
+
+/* 3. 사업-고객사 계약관계 */
+CREATE TABLE IF NOT EXISTS biz_cust_rel (
+    BIZ_CUST_REL_SN BIGINT NOT NULL AUTO_INCREMENT COMMENT '사업고객관계일련번호',
+    BIZ_ID VARCHAR(20) NOT NULL COMMENT '사업ID',
+    CUST_SN BIGINT NOT NULL COMMENT '고객일련번호',
+    REL_SE_CD VARCHAR(30) NOT NULL COMMENT '관계구분코드',
+    REL_LVL INT NOT NULL DEFAULT 0 COMMENT '관계단계',
+    SORT_SEQ INT NOT NULL DEFAULT 1 COMMENT '정렬순서',
+    DIRECT_CTRT_YN CHAR(1) NOT NULL DEFAULT 'N' COMMENT '직접계약여부',
+    OUR_CO_YN CHAR(1) NOT NULL DEFAULT 'N' COMMENT '우리회사여부',
+    RMRK_CN VARCHAR(1000) DEFAULT NULL COMMENT '비고내용',
+    USE_YN CHAR(1) NOT NULL DEFAULT 'Y' COMMENT '사용여부',
+    REG_DT DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '등록일시',
+    MDFCN_DT DATETIME DEFAULT NULL COMMENT '수정일시',
+    PRIMARY KEY (BIZ_CUST_REL_SN),
+    KEY IDX_BIZ_CUST_REL_BIZ (BIZ_ID, SORT_SEQ),
+    KEY IDX_BIZ_CUST_REL_CUST (CUST_SN),
+    CONSTRAINT FK_BIZ_CUST_REL_BIZ FOREIGN KEY (BIZ_ID) REFERENCES biz_info (BIZ_ID) ON DELETE CASCADE,
+    CONSTRAINT FK_BIZ_CUST_REL_CUST FOREIGN KEY (CUST_SN) REFERENCES cust_info (CUST_SN)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='사업고객관계';
+
+/* 4. 사업 투입인력 */
+CREATE TABLE IF NOT EXISTS biz_mnpw (
+    BIZ_MNPW_SN BIGINT NOT NULL AUTO_INCREMENT COMMENT '사업투입인력일련번호',
+    BIZ_ID VARCHAR(20) NOT NULL COMMENT '사업ID',
+    USER_ID VARCHAR(50) DEFAULT NULL COMMENT '사용자아이디',
+    INPUT_MNPW_NM VARCHAR(100) NOT NULL COMMENT '투입인력명',
+    INPUT_SE_CD VARCHAR(30) DEFAULT NULL COMMENT '투입구분코드',
+    ROLE_NM VARCHAR(100) DEFAULT NULL COMMENT '역할명',
+    JBPS_NM VARCHAR(100) DEFAULT NULL COMMENT '직위명',
+    INPUT_BGNG_YMD DATE DEFAULT NULL COMMENT '투입시작일자',
+    INPUT_END_YMD DATE DEFAULT NULL COMMENT '투입종료일자',
+    INPUT_MCNT DECIMAL(8,2) DEFAULT 0 COMMENT '투입개월수',
+    UNTPRC DECIMAL(15,0) DEFAULT 0 COMMENT '단가',
+    RMRK_CN VARCHAR(1000) DEFAULT NULL COMMENT '비고내용',
+    USE_YN CHAR(1) NOT NULL DEFAULT 'Y' COMMENT '사용여부',
+    REG_DT DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '등록일시',
+    MDFCN_DT DATETIME DEFAULT NULL COMMENT '수정일시',
+    PRIMARY KEY (BIZ_MNPW_SN),
+    KEY IDX_BIZ_MNPW_BIZ (BIZ_ID),
+    KEY IDX_BIZ_MNPW_USER (USER_ID),
+    CONSTRAINT FK_BIZ_MNPW_BIZ FOREIGN KEY (BIZ_ID) REFERENCES biz_info (BIZ_ID) ON DELETE CASCADE,
+    CONSTRAINT FK_BIZ_MNPW_USER FOREIGN KEY (USER_ID) REFERENCES user_info (USER_ID)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='사업투입인력';
+
+/* 5. 사업 비용 */
+CREATE TABLE IF NOT EXISTS biz_cst (
+    BIZ_CST_SN BIGINT NOT NULL AUTO_INCREMENT COMMENT '사업비용일련번호',
+    BIZ_ID VARCHAR(20) NOT NULL COMMENT '사업ID',
+    CST_SE_CD VARCHAR(30) NOT NULL COMMENT '비용구분코드',
+    CST_NM VARCHAR(200) NOT NULL COMMENT '비용명',
+    OCRN_CST DECIMAL(15,0) DEFAULT 0 COMMENT '발생비용',
+    OCRN_YMD DATE DEFAULT NULL COMMENT '발생일자',
+    RMRK_CN VARCHAR(1000) DEFAULT NULL COMMENT '비고내용',
+    USE_YN CHAR(1) NOT NULL DEFAULT 'Y' COMMENT '사용여부',
+    REG_DT DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '등록일시',
+    MDFCN_DT DATETIME DEFAULT NULL COMMENT '수정일시',
+    PRIMARY KEY (BIZ_CST_SN),
+    KEY IDX_BIZ_CST_BIZ (BIZ_ID),
+    CONSTRAINT FK_BIZ_CST_BIZ FOREIGN KEY (BIZ_ID) REFERENCES biz_info (BIZ_ID) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='사업비용';
+
+/* 6. 사업 프로세스/일정 */
+CREATE TABLE IF NOT EXISTS biz_schdl (
+    BIZ_SCHDL_SN BIGINT NOT NULL AUTO_INCREMENT COMMENT '사업일정일련번호',
+    BIZ_ID VARCHAR(20) NOT NULL COMMENT '사업ID',
+    SCHDL_NM VARCHAR(200) NOT NULL COMMENT '일정명',
+    SCHDL_CN VARCHAR(1000) DEFAULT NULL COMMENT '일정내용',
+    SCHDL_SE_CD VARCHAR(30) DEFAULT NULL COMMENT '일정구분코드',
+    SCHDL_BGNG_YMD DATE DEFAULT NULL COMMENT '일정시작일자',
+    SCHDL_END_YMD DATE DEFAULT NULL COMMENT '일정종료일자',
+    PIC_ID VARCHAR(50) DEFAULT NULL COMMENT '담당자아이디',
+    RMRK_CN VARCHAR(1000) DEFAULT NULL COMMENT '비고내용',
+    USE_YN CHAR(1) NOT NULL DEFAULT 'Y' COMMENT '사용여부',
+    REG_DT DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '등록일시',
+    MDFCN_DT DATETIME DEFAULT NULL COMMENT '수정일시',
+    PRIMARY KEY (BIZ_SCHDL_SN),
+    KEY IDX_BIZ_SCHDL_BIZ (BIZ_ID, SCHDL_BGNG_YMD),
+    KEY IDX_BIZ_SCHDL_PIC (PIC_ID),
+    CONSTRAINT FK_BIZ_SCHDL_BIZ FOREIGN KEY (BIZ_ID) REFERENCES biz_info (BIZ_ID) ON DELETE CASCADE,
+    CONSTRAINT FK_BIZ_SCHDL_PIC FOREIGN KEY (PIC_ID) REFERENCES user_info (USER_ID)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='사업일정';

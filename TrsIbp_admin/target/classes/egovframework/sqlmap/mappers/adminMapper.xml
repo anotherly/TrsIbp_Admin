@@ -1,0 +1,408 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.TRSolution.trsIbp.admin.mapper.AdminMapper">
+
+    <select id="selectDashboardSummary" resultType="map">
+        SELECT
+             (SELECT COUNT(*) FROM co_aply_info WHERE PRCS_STTS_CD = 'WAIT') AS PENDING_COMPANY_CNT
+            ,(SELECT COUNT(*) FROM user_info WHERE DATE(REG_DT) = CURDATE()) AS TODAY_USER_CNT
+            ,(SELECT COUNT(*) FROM co_info WHERE USE_YN = 'Y') AS ACTIVE_COMPANY_CNT
+            ,(SELECT COUNT(*) FROM sys_log_info
+               WHERE LOG_LEVEL_CD IN ('ERROR', 'WARN')
+                 AND DATE(REG_DT) = CURDATE()) AS TODAY_ERROR_CNT
+    </select>
+
+    <select id="selectPendingCompanyRequestList" resultType="map">
+        SELECT
+             APLY_SN
+            ,CO_NM
+            ,BRNO
+            ,APLCNT_NM
+            ,REG_DT
+            ,PRCS_STTS_CD
+        FROM co_aply_info
+        WHERE PRCS_STTS_CD = 'WAIT'
+        ORDER BY REG_DT ASC
+        LIMIT 8
+    </select>
+
+    <select id="selectRecentSystemLogList" resultType="map">
+        SELECT
+             SYS_LOG_SN
+            ,LOG_SE_CD
+            ,LOG_LEVEL_CD
+            ,LOG_TITLE
+            ,USER_ID
+            ,REG_DT
+        FROM sys_log_info
+        WHERE LOG_LEVEL_CD IN ('ERROR', 'WARN')
+        ORDER BY REG_DT DESC
+        LIMIT 6
+    </select>
+
+    <select id="selectRecentAdminHistoryList" resultType="map">
+        SELECT
+             H.ADMIN_PRCS_SN
+            ,H.ADMIN_ID
+            ,COALESCE(U.USER_NM, H.ADMIN_ID) AS ADMIN_NM
+            ,H.TARGET_SE_CD
+            ,H.TARGET_ID
+            ,H.ACTION_CN
+            ,H.REG_DT
+        FROM admin_prcs_hstry H
+        LEFT JOIN user_info U ON U.USER_ID = H.ADMIN_ID
+        ORDER BY H.REG_DT DESC
+        LIMIT 6
+    </select>
+
+    <select id="selectCompanyRequestList" parameterType="adminVO" resultType="map">
+        SELECT
+             A.APLY_SN
+            ,A.CO_NM
+            ,A.BRNO
+            ,A.APLCNT_NM
+            ,A.RPRSV_NM
+            ,A.PIC_TELNO
+            ,A.PIC_EML_ADDR
+            ,A.PRCS_STTS_CD
+            ,A.RJCT_RSN
+            ,A.REG_DT
+            ,A.PRCS_DT
+            ,A.PRCS_USER_ID
+            ,C.CO_ID
+        FROM co_aply_info A
+        LEFT JOIN co_info C ON C.APLY_SN = A.APLY_SN
+        WHERE 1 = 1
+        <if test="prcsSttsCd != null and prcsSttsCd != ''">
+            AND A.PRCS_STTS_CD = #{prcsSttsCd}
+        </if>
+        <if test="searchValue != null and searchValue != ''">
+            AND (
+                   A.CO_NM LIKE CONCAT('%', #{searchValue}, '%')
+                OR A.BRNO LIKE CONCAT('%', #{searchValue}, '%')
+                OR A.APLCNT_NM LIKE CONCAT('%', #{searchValue}, '%')
+                OR A.PIC_EML_ADDR LIKE CONCAT('%', #{searchValue}, '%')
+            )
+        </if>
+        ORDER BY
+            CASE A.PRCS_STTS_CD WHEN 'WAIT' THEN 0 ELSE 1 END,
+            A.REG_DT DESC
+        LIMIT 200
+    </select>
+
+    <select id="selectCompanyRequestDetail" parameterType="int" resultType="map">
+        SELECT
+             A.APLY_SN
+            ,A.CO_NM
+            ,A.BRNO
+            ,A.APLCNT_NM
+            ,A.RPRSV_NM
+            ,A.PIC_TELNO
+            ,A.PIC_EML_ADDR
+            ,A.ORGNL_FILE_NM
+            ,A.ENCPT_FILE_NM
+            ,A.FILE_PATH_NM
+            ,A.PRCS_STTS_CD
+            ,A.RJCT_RSN
+            ,A.REG_DT
+            ,A.PRCS_DT
+            ,A.PRCS_USER_ID
+            ,C.CO_ID
+        FROM co_aply_info A
+        LEFT JOIN co_info C ON C.APLY_SN = A.APLY_SN
+        WHERE A.APLY_SN = #{aplySn}
+    </select>
+
+    <select id="selectCompanyRequestForUpdate" parameterType="int" resultType="map">
+        SELECT
+             APLY_SN
+            ,CO_NM
+            ,BRNO
+            ,APLCNT_NM
+            ,RPRSV_NM
+            ,PIC_TELNO
+            ,PIC_EML_ADDR
+            ,PRCS_STTS_CD
+        FROM co_aply_info
+        WHERE APLY_SN = #{aplySn}
+        FOR UPDATE
+    </select>
+
+    <select id="selectApprovedCompanyDuplicateCount" parameterType="map" resultType="int">
+        SELECT COUNT(*)
+        FROM co_info
+        WHERE APLY_SN = #{APLY_SN}
+           OR (BRNO IS NOT NULL AND BRNO = #{BRNO})
+    </select>
+
+    <insert id="insertApprovedCompany" parameterType="map">
+        INSERT INTO co_info (
+             CO_ID
+            ,APLY_SN
+            ,CO_NM
+            ,BRNO
+            ,RPRSV_NM
+            ,PIC_NM
+            ,PIC_TELNO
+            ,PIC_EML_ADDR
+            ,USE_YN
+            ,REG_DT
+        ) VALUES (
+             #{CO_ID}
+            ,#{APLY_SN}
+            ,#{CO_NM}
+            ,#{BRNO}
+            ,#{RPRSV_NM}
+            ,#{APLCNT_NM}
+            ,#{PIC_TELNO}
+            ,#{PIC_EML_ADDR}
+            ,'Y'
+            ,NOW()
+        )
+    </insert>
+
+    <update id="updateCompanyRequestStatus" parameterType="adminVO">
+        UPDATE co_aply_info
+        SET
+             PRCS_STTS_CD = #{prcsSttsCd}
+            ,RJCT_RSN =
+                <choose>
+                    <when test="prcsSttsCd == 'REJECT'">#{rjctRsn}</when>
+                    <otherwise>NULL</otherwise>
+                </choose>
+            ,PRCS_DT = NOW()
+            ,PRCS_USER_ID = #{adminId}
+        WHERE APLY_SN = #{aplySn}
+          AND PRCS_STTS_CD = 'WAIT'
+    </update>
+
+    <select id="selectCompanyList" parameterType="adminVO" resultType="map">
+        SELECT
+             C.CO_ID
+            ,C.CO_CD
+            ,C.CO_NM
+            ,C.BRNO
+            ,C.RPRSV_NM
+            ,C.PIC_NM
+            ,C.PIC_TELNO
+            ,C.PIC_EML_ADDR
+            ,C.USE_YN
+            ,C.REG_DT
+            ,COUNT(U.USER_ID) AS USER_CNT
+            ,SUM(CASE WHEN U.USE_YN = 'Y' THEN 1 ELSE 0 END) AS ACTIVE_USER_CNT
+        FROM co_info C
+        LEFT JOIN user_info U ON U.CO_ID = C.CO_ID
+        WHERE 1 = 1
+        <if test="useYn != null and useYn != ''">
+            AND C.USE_YN = #{useYn}
+        </if>
+        <if test="searchValue != null and searchValue != ''">
+            AND (
+                   C.CO_ID LIKE CONCAT('%', #{searchValue}, '%')
+                OR C.CO_NM LIKE CONCAT('%', #{searchValue}, '%')
+                OR C.BRNO LIKE CONCAT('%', #{searchValue}, '%')
+            )
+        </if>
+        GROUP BY
+             C.CO_ID, C.CO_CD, C.CO_NM, C.BRNO, C.RPRSV_NM
+            ,C.PIC_NM, C.PIC_TELNO, C.PIC_EML_ADDR, C.USE_YN, C.REG_DT
+        ORDER BY C.REG_DT DESC
+        LIMIT 200
+    </select>
+
+    <update id="updateCompanyUseYn" parameterType="adminVO">
+        UPDATE co_info
+        SET USE_YN = #{useYn}
+        WHERE CO_ID = #{coId}
+    </update>
+
+    <select id="selectUserList" parameterType="adminVO" resultType="map">
+        SELECT
+             U.USER_ID
+            ,U.USER_NM
+            ,U.CO_ID
+            ,C.CO_NM
+            ,D.DEPT_NM
+            ,U.JBPS_NM
+            ,U.AUTHRT_ID
+            ,A.AUTHRT_NM
+            ,U.USER_TELNO
+            ,U.USE_YN
+            ,U.REG_DT
+        FROM user_info U
+        LEFT JOIN co_info C ON C.CO_ID = U.CO_ID
+        LEFT JOIN dept_info D ON D.DEPT_ID = U.DEPT_ID
+        LEFT JOIN authrt_info A ON A.AUTHRT_ID = U.AUTHRT_ID
+        WHERE 1 = 1
+        <if test="useYn != null and useYn != ''">
+            AND U.USE_YN = #{useYn}
+        </if>
+        <if test="searchValue != null and searchValue != ''">
+            AND (
+                   U.USER_ID LIKE CONCAT('%', #{searchValue}, '%')
+                OR U.USER_NM LIKE CONCAT('%', #{searchValue}, '%')
+                OR C.CO_NM LIKE CONCAT('%', #{searchValue}, '%')
+                OR D.DEPT_NM LIKE CONCAT('%', #{searchValue}, '%')
+            )
+        </if>
+        ORDER BY U.REG_DT DESC
+        LIMIT 300
+    </select>
+
+    <update id="updateUserUseYn" parameterType="adminVO">
+        UPDATE user_info
+        SET USE_YN = #{useYn}
+        WHERE USER_ID = #{userId}
+    </update>
+
+    <select id="selectSystemLogList" parameterType="adminVO" resultType="map">
+        SELECT
+             SYS_LOG_SN
+            ,LOG_SE_CD
+            ,LOG_LEVEL_CD
+            ,LOG_TITLE
+            ,LOG_CN
+            ,USER_ID
+            ,REQUEST_URI
+            ,CLIENT_IP_ADDR
+            ,REG_DT
+        FROM sys_log_info
+        WHERE 1 = 1
+        <if test="logLevelCd != null and logLevelCd != ''">
+            AND LOG_LEVEL_CD = #{logLevelCd}
+        </if>
+        <if test="logSeCd != null and logSeCd != ''">
+            AND LOG_SE_CD = #{logSeCd}
+        </if>
+        <if test="searchValue != null and searchValue != ''">
+            AND (
+                   LOG_TITLE LIKE CONCAT('%', #{searchValue}, '%')
+                OR LOG_CN LIKE CONCAT('%', #{searchValue}, '%')
+                OR USER_ID LIKE CONCAT('%', #{searchValue}, '%')
+                OR CLIENT_IP_ADDR LIKE CONCAT('%', #{searchValue}, '%')
+            )
+        </if>
+        ORDER BY REG_DT DESC
+        LIMIT 500
+    </select>
+
+    <select id="selectAdminHistoryList" parameterType="adminVO" resultType="map">
+        SELECT
+             H.ADMIN_PRCS_SN
+            ,H.ADMIN_ID
+            ,COALESCE(U.USER_NM, H.ADMIN_ID) AS ADMIN_NM
+            ,H.ACTION_SE_CD
+            ,H.TARGET_SE_CD
+            ,H.TARGET_ID
+            ,H.ACTION_CN
+            ,H.REG_DT
+        FROM admin_prcs_hstry H
+        LEFT JOIN user_info U ON U.USER_ID = H.ADMIN_ID
+        WHERE 1 = 1
+        <if test="searchValue != null and searchValue != ''">
+            AND (
+                   H.ADMIN_ID LIKE CONCAT('%', #{searchValue}, '%')
+                OR U.USER_NM LIKE CONCAT('%', #{searchValue}, '%')
+                OR H.TARGET_ID LIKE CONCAT('%', #{searchValue}, '%')
+                OR H.ACTION_CN LIKE CONCAT('%', #{searchValue}, '%')
+            )
+        </if>
+        ORDER BY H.REG_DT DESC
+        LIMIT 500
+    </select>
+
+    <select id="selectCommonCodeGroupList" resultType="map">
+        SELECT
+             CD_GROUP_ID
+            ,CD_GROUP_NM
+            ,USE_YN
+            ,SORT_SEQ
+        FROM cmn_cd_group
+        ORDER BY SORT_SEQ, CD_GROUP_ID
+    </select>
+
+    <select id="selectCommonCodeList" parameterType="adminVO" resultType="map">
+        SELECT
+             CD_GROUP_ID
+            ,CD
+            ,CD_NM
+            ,CD_EXPLN
+            ,SORT_SEQ
+            ,DFLT_YN
+            ,USE_YN
+        FROM cmn_cd
+        WHERE CD_GROUP_ID = #{cdGroupId}
+        ORDER BY SORT_SEQ, CD
+    </select>
+
+    <update id="updateCommonCodeUseYn" parameterType="adminVO">
+        UPDATE cmn_cd
+        SET USE_YN = #{useYn}
+        WHERE CD_GROUP_ID = #{cdGroupId}
+          AND CD = #{cd}
+    </update>
+
+    <select id="selectOperationPolicyList" resultType="map">
+        SELECT
+             POLICY_ID
+            ,POLICY_NM
+            ,POLICY_VALUE
+            ,POLICY_EXPLN
+            ,MDFR_ID
+            ,MDFCN_DT
+        FROM oper_policy
+        ORDER BY SORT_SEQ, POLICY_ID
+    </select>
+
+    <update id="updateOperationPolicy" parameterType="adminVO">
+        UPDATE oper_policy
+        SET
+             POLICY_VALUE = #{policyValue}
+            ,MDFR_ID = #{adminId}
+            ,MDFCN_DT = NOW()
+        WHERE POLICY_ID = #{policyId}
+    </update>
+
+    <insert id="insertAdminHistory" parameterType="adminVO">
+        INSERT INTO admin_prcs_hstry (
+             ADMIN_ID
+            ,ACTION_SE_CD
+            ,TARGET_SE_CD
+            ,TARGET_ID
+            ,ACTION_CN
+            ,REG_DT
+        ) VALUES (
+             #{adminId}
+            ,#{actionSeCd}
+            ,#{targetSeCd}
+            ,#{targetId}
+            ,#{actionCn}
+            ,NOW()
+        )
+    </insert>
+
+    <insert id="insertSystemLog" parameterType="adminVO">
+        INSERT INTO sys_log_info (
+             LOG_SE_CD
+            ,LOG_LEVEL_CD
+            ,LOG_TITLE
+            ,LOG_CN
+            ,USER_ID
+            ,REQUEST_URI
+            ,CLIENT_IP_ADDR
+            ,REG_DT
+        ) VALUES (
+             #{logSeCd}
+            ,#{logLevelCd}
+            ,#{logTitle}
+            ,#{logCn}
+            ,#{userId}
+            ,#{requestUri}
+            ,#{clientIpAddr}
+            ,NOW()
+        )
+    </insert>
+
+</mapper>

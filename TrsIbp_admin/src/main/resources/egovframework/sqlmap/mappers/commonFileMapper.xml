@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.TRSolution.trsIbp.comm.file.mapper.CommonFileMapper">
+
+    <resultMap id="commonFileMap" type="kr.co.TRSolution.trsIbp.comm.file.vo.CommonFileVO">
+        <id property="atchFileSn" column="ATCH_FILE_SN"/>
+        <result property="coId" column="CO_ID"/>
+        <result property="refSeCd" column="REF_SE_CD"/>
+        <result property="refId" column="REF_ID"/>
+        <result property="fileSeCd" column="FILE_SE_CD"/>
+        <result property="orgnlFileNm" column="ORGNL_FILE_NM"/>
+        <result property="encptFileNm" column="ENCPT_FILE_NM"/>
+        <result property="filePathNm" column="FILE_PATH_NM"/>
+        <result property="fileSz" column="FILE_SZ"/>
+        <result property="fileExtnNm" column="FILE_EXTN_NM"/>
+        <result property="sortSeq" column="SORT_SEQ"/>
+        <result property="useYn" column="USE_YN"/>
+        <result property="rgtrId" column="RGTR_ID"/>
+        <result property="regDt" column="REG_DT"/>
+    </resultMap>
+
+    <insert id="insertFile" parameterType="kr.co.TRSolution.trsIbp.comm.file.vo.CommonFileVO" useGeneratedKeys="true" keyProperty="atchFileSn">
+        INSERT INTO atch_file_info (
+            CO_ID, REF_SE_CD, REF_ID, FILE_SE_CD, ORGNL_FILE_NM, ENCPT_FILE_NM,
+            FILE_PATH_NM, FILE_SZ, FILE_EXTN_NM, SORT_SEQ, USE_YN, RGTR_ID, REG_DT
+        ) VALUES (
+            #{coId}, #{refSeCd}, #{refId}, #{fileSeCd}, #{orgnlFileNm}, #{encptFileNm},
+            #{filePathNm}, #{fileSz}, #{fileExtnNm}, #{sortSeq}, 'Y', #{rgtrId}, NOW()
+        )
+    </insert>
+
+    <select id="selectFile" parameterType="kr.co.TRSolution.trsIbp.comm.file.vo.CommonFileVO" resultMap="commonFileMap">
+        SELECT ATCH_FILE_SN, CO_ID, REF_SE_CD, REF_ID, FILE_SE_CD, ORGNL_FILE_NM,
+               ENCPT_FILE_NM, FILE_PATH_NM, FILE_SZ, FILE_EXTN_NM, SORT_SEQ,
+               USE_YN, RGTR_ID, DATE_FORMAT(REG_DT, '%Y-%m-%d %H:%i') AS REG_DT
+        FROM atch_file_info
+        WHERE ATCH_FILE_SN = #{atchFileSn}
+          AND USE_YN = 'Y'
+    </select>
+
+    <select id="selectFileList" parameterType="kr.co.TRSolution.trsIbp.comm.file.vo.CommonFileVO" resultMap="commonFileMap">
+        SELECT ATCH_FILE_SN, CO_ID, REF_SE_CD, REF_ID, FILE_SE_CD, ORGNL_FILE_NM,
+               ENCPT_FILE_NM, FILE_PATH_NM, FILE_SZ, FILE_EXTN_NM, SORT_SEQ,
+               USE_YN, RGTR_ID, DATE_FORMAT(REG_DT, '%Y-%m-%d %H:%i') AS REG_DT
+        FROM atch_file_info
+        WHERE CO_ID = #{coId}
+          AND REF_SE_CD = #{refSeCd}
+          AND REF_ID = #{refId}
+          AND FILE_SE_CD = #{fileSeCd}
+          AND USE_YN = 'Y'
+        ORDER BY SORT_SEQ ASC, ATCH_FILE_SN DESC
+    </select>
+
+    <update id="deactivateProfileFiles" parameterType="kr.co.TRSolution.trsIbp.comm.file.vo.CommonFileVO">
+        UPDATE atch_file_info
+        SET USE_YN = 'N', MDFCN_DT = NOW()
+        WHERE CO_ID = #{coId}
+          AND REF_SE_CD = 'USER'
+          AND REF_ID = #{refId}
+          AND FILE_SE_CD = 'PROFILE'
+          AND USE_YN = 'Y'
+    </update>
+
+    <update id="deleteFile" parameterType="kr.co.TRSolution.trsIbp.comm.file.vo.CommonFileVO">
+        UPDATE atch_file_info
+        SET USE_YN = 'N', MDFCN_DT = NOW()
+        WHERE ATCH_FILE_SN = #{atchFileSn}
+          AND CO_ID = #{coId}
+          AND REF_SE_CD = 'USER'
+          AND REF_ID = #{refId}
+          AND USE_YN = 'Y'
+    </update>
+</mapper>

@@ -1,0 +1,273 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.TRSolution.trsIbp.schedule.mapper.ScheduleMapper">
+
+    <resultMap id="scheduleMap" type="kr.co.TRSolution.trsIbp.schedule.vo.ScheduleVO">
+        <id property="schdlSn" column="SCHDL_SN"/>
+        <result property="coId" column="CO_ID"/>
+        <result property="bizId" column="BIZ_ID"/>
+        <result property="bizNm" column="BIZ_NM"/>
+        <result property="schdlSeCd" column="SCHDL_SE_CD"/>
+        <result property="schdlSeNm" column="SCHDL_SE_NM"/>
+        <result property="vacSeCd" column="VAC_SE_CD"/>
+        <result property="schdlNm" column="SCHDL_NM"/>
+        <result property="bgngDt" column="BGNG_DT"/>
+        <result property="endDt" column="END_DT"/>
+        <result property="allDayYn" column="ALL_DAY_YN"/>
+        <result property="placeNm" column="PLACE_NM"/>
+        <result property="schdlCn" column="SCHDL_CN"/>
+        <result property="targetUserId" column="TARGET_USER_ID"/>
+        <result property="targetUserNm" column="TARGET_USER_NM"/>
+        <result property="targetUserIds" column="TARGET_USER_IDS"/>
+        <result property="targetUserNms" column="TARGET_USER_NMS"/>
+        <result property="targetCnt" column="TARGET_CNT"/>
+        <result property="colorType" column="COLOR_TYPE"/>
+        <result property="rgtrId" column="RGTR_ID"/>
+        <result property="regDt" column="REG_DT"/>
+    </resultMap>
+
+    <select id="selectScheduleCodeList" parameterType="kr.co.TRSolution.trsIbp.schedule.vo.ScheduleVO" resultMap="scheduleMap">
+        SELECT CD AS SCHDL_SE_CD,
+               CD_NM AS SCHDL_SE_NM
+        FROM cmn_cd
+        WHERE CD_GROUP_ID = 'CAL_SCHDL_SE_CD'
+          AND USE_YN = 'Y'
+          AND CD IN ('VAC', 'BIZTRIP', 'OUTSIDE', 'HOME', 'CLIENT', 'MEETING', 'ETC')
+        ORDER BY SORT_SEQ, CD
+    </select>
+
+    <sql id="scheduleFilter">
+        S.CO_ID = #{coId}
+        AND S.USE_YN = 'Y'
+        <if test='searchUnassignedYn != null and searchUnassignedYn == "Y"'>
+            AND S.BIZ_ID IS NULL
+        </if>
+        <if test="searchBizId != null and searchBizId != ''">
+            AND S.BIZ_ID = #{searchBizId}
+        </if>
+        <if test="viewType != null and viewType == 'my'">
+            AND EXISTS (
+                SELECT 1 FROM schdl_user_rel MR
+                WHERE MR.SCHDL_SN = S.SCHDL_SN
+                  AND MR.USER_ID = #{targetUserId}
+            )
+        </if>
+        <if test="viewType != null and viewType == 'team'">
+            AND S.SCHDL_SE_CD IN ('VAC', 'BIZTRIP', 'OUTSIDE', 'HOME', 'CLIENT')
+        </if>
+    </sql>
+
+    <select id="selectMonthScheduleSummaryList" parameterType="kr.co.TRSolution.trsIbp.schedule.vo.ScheduleVO" resultMap="scheduleMap">
+        SELECT DATE_FORMAT(DT.CAL_YMD, '%Y-%m-%d') AS BGNG_DT,
+               S.SCHDL_SE_CD,
+               CASE
+                   WHEN S.SCHDL_SE_CD = 'VAC' THEN 'leave'
+                   WHEN S.SCHDL_SE_CD = 'BIZTRIP' THEN 'biztrip'
+                   WHEN S.SCHDL_SE_CD = 'OUTSIDE' THEN 'outside'
+                   WHEN S.SCHDL_SE_CD = 'HOME' THEN 'home'
+                   WHEN S.SCHDL_SE_CD = 'CLIENT' THEN 'resident'
+                   WHEN S.SCHDL_SE_CD = 'MEETING' THEN 'meeting'
+                   ELSE 'etc'
+               END AS COLOR_TYPE,
+               COUNT(*) AS TARGET_CNT
+        FROM schdl_info S
+        JOIN (
+            SELECT DATE_ADD(STR_TO_DATE(#{monthStartYmd}, '%Y-%m-%d'), INTERVAL seq DAY) AS CAL_YMD
+            FROM (
+                SELECT 0 seq UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9
+                UNION ALL SELECT 10 UNION ALL SELECT 11 UNION ALL SELECT 12 UNION ALL SELECT 13 UNION ALL SELECT 14 UNION ALL SELECT 15 UNION ALL SELECT 16 UNION ALL SELECT 17 UNION ALL SELECT 18 UNION ALL SELECT 19
+                UNION ALL SELECT 20 UNION ALL SELECT 21 UNION ALL SELECT 22 UNION ALL SELECT 23 UNION ALL SELECT 24 UNION ALL SELECT 25 UNION ALL SELECT 26 UNION ALL SELECT 27 UNION ALL SELECT 28 UNION ALL SELECT 29 UNION ALL SELECT 30
+            ) N
+            WHERE DATE_ADD(STR_TO_DATE(#{monthStartYmd}, '%Y-%m-%d'), INTERVAL seq DAY) <![CDATA[<=]]> STR_TO_DATE(#{monthEndYmd}, '%Y-%m-%d')
+        ) DT ON DT.CAL_YMD BETWEEN DATE(S.BGNG_DT) AND DATE(S.END_DT)
+        WHERE <include refid="scheduleFilter"/>
+          AND DATE(S.BGNG_DT) <![CDATA[<=]]> STR_TO_DATE(#{monthEndYmd}, '%Y-%m-%d')
+          AND DATE(S.END_DT) <![CDATA[>=]]> STR_TO_DATE(#{monthStartYmd}, '%Y-%m-%d')
+        GROUP BY DT.CAL_YMD, S.SCHDL_SE_CD, COLOR_TYPE
+        ORDER BY DT.CAL_YMD, FIELD(COLOR_TYPE, 'leave', 'biztrip', 'outside', 'home', 'resident', 'meeting', 'etc')
+    </select>
+
+    <select id="selectDayScheduleList" parameterType="kr.co.TRSolution.trsIbp.schedule.vo.ScheduleVO" resultMap="scheduleMap">
+        SELECT S.SCHDL_SN,
+               S.CO_ID,
+               S.BIZ_ID,
+               B.BIZ_NM,
+               S.SCHDL_SE_CD,
+               C.CD_NM AS SCHDL_SE_NM,
+               S.VAC_SE_CD,
+               S.SCHDL_NM,
+               DATE_FORMAT(S.BGNG_DT, '%Y-%m-%d %H:%i') AS BGNG_DT,
+               DATE_FORMAT(S.END_DT, '%Y-%m-%d %H:%i') AS END_DT,
+               S.ALL_DAY_YN,
+               S.PLACE_NM,
+               S.SCHDL_CN,
+               S.RGTR_ID,
+               GROUP_CONCAT(U.USER_ID ORDER BY U.USER_NM SEPARATOR ',') AS TARGET_USER_IDS,
+               GROUP_CONCAT(U.USER_NM ORDER BY U.USER_NM SEPARATOR ', ') AS TARGET_USER_NMS,
+               COUNT(U.USER_ID) AS TARGET_CNT,
+               CASE
+                   WHEN S.SCHDL_SE_CD = 'VAC' THEN 'leave'
+                   WHEN S.SCHDL_SE_CD = 'BIZTRIP' THEN 'biztrip'
+                   WHEN S.SCHDL_SE_CD = 'OUTSIDE' THEN 'outside'
+                   WHEN S.SCHDL_SE_CD = 'HOME' THEN 'home'
+                   WHEN S.SCHDL_SE_CD = 'CLIENT' THEN 'resident'
+                   WHEN S.SCHDL_SE_CD = 'MEETING' THEN 'meeting'
+                   ELSE 'etc'
+               END AS COLOR_TYPE
+        FROM schdl_info S
+        LEFT JOIN biz_info B ON B.BIZ_ID = S.BIZ_ID AND B.CO_ID = S.CO_ID
+        LEFT JOIN cmn_cd C ON C.CD_GROUP_ID = 'CAL_SCHDL_SE_CD' AND C.CD = S.SCHDL_SE_CD
+        LEFT JOIN schdl_user_rel R ON R.SCHDL_SN = S.SCHDL_SN
+        LEFT JOIN user_info U ON U.USER_ID = R.USER_ID
+        WHERE <include refid="scheduleFilter"/>
+          AND DATE(S.BGNG_DT) <![CDATA[<=]]> STR_TO_DATE(#{selectedYmd}, '%Y-%m-%d')
+          AND DATE(S.END_DT) <![CDATA[>=]]> STR_TO_DATE(#{selectedYmd}, '%Y-%m-%d')
+        GROUP BY S.SCHDL_SN
+        ORDER BY S.ALL_DAY_YN DESC, S.BGNG_DT, S.SCHDL_SN
+    </select>
+
+    <select id="selectUserDayScheduleList" parameterType="kr.co.TRSolution.trsIbp.schedule.vo.ScheduleVO" resultMap="scheduleMap">
+        SELECT S.SCHDL_SN,
+               DATE_FORMAT(S.BGNG_DT, '%Y-%m-%d %H:%i') AS BGNG_DT,
+               DATE_FORMAT(S.END_DT, '%Y-%m-%d %H:%i') AS END_DT,
+               S.ALL_DAY_YN
+        FROM schdl_info S
+        JOIN schdl_user_rel R ON R.SCHDL_SN = S.SCHDL_SN
+        WHERE S.CO_ID = #{coId}
+          AND S.USE_YN = 'Y'
+          AND R.USER_ID = #{targetUserId}
+          <if test="schdlSn != null">
+          AND S.SCHDL_SN <![CDATA[<>]]> #{schdlSn}
+          </if>
+          AND S.BGNG_DT <![CDATA[<]]> S.END_DT
+          AND S.BGNG_DT <![CDATA[<]]> DATE_ADD(STR_TO_DATE(#{selectedYmd}, '%Y-%m-%d'), INTERVAL 1 DAY)
+          AND S.END_DT <![CDATA[>]]> STR_TO_DATE(#{selectedYmd}, '%Y-%m-%d')
+        ORDER BY S.BGNG_DT, S.END_DT, S.SCHDL_SN
+    </select>
+
+    <select id="selectSchedule" parameterType="kr.co.TRSolution.trsIbp.schedule.vo.ScheduleVO" resultMap="scheduleMap">
+        SELECT S.SCHDL_SN,
+               S.CO_ID,
+               S.BIZ_ID,
+               B.BIZ_NM,
+               S.SCHDL_SE_CD,
+               C.CD_NM AS SCHDL_SE_NM,
+               S.VAC_SE_CD,
+               S.SCHDL_NM,
+               DATE_FORMAT(S.BGNG_DT, '%Y-%m-%d %H:%i') AS BGNG_DT,
+               DATE_FORMAT(S.END_DT, '%Y-%m-%d %H:%i') AS END_DT,
+               S.ALL_DAY_YN,
+               S.PLACE_NM,
+               S.SCHDL_CN,
+               S.RGTR_ID,
+               GROUP_CONCAT(U.USER_ID ORDER BY U.USER_NM SEPARATOR ',') AS TARGET_USER_IDS,
+               GROUP_CONCAT(U.USER_NM ORDER BY U.USER_NM SEPARATOR ', ') AS TARGET_USER_NMS
+        FROM schdl_info S
+        LEFT JOIN biz_info B ON B.BIZ_ID = S.BIZ_ID AND B.CO_ID = S.CO_ID
+        LEFT JOIN cmn_cd C ON C.CD_GROUP_ID = 'CAL_SCHDL_SE_CD' AND C.CD = S.SCHDL_SE_CD
+        LEFT JOIN schdl_user_rel R ON R.SCHDL_SN = S.SCHDL_SN
+        LEFT JOIN user_info U ON U.USER_ID = R.USER_ID
+        WHERE S.SCHDL_SN = #{schdlSn}
+          AND S.CO_ID = #{coId}
+          AND S.USE_YN = 'Y'
+        GROUP BY S.SCHDL_SN
+    </select>
+
+    <insert id="insertSchedule" parameterType="kr.co.TRSolution.trsIbp.schedule.vo.ScheduleVO" useGeneratedKeys="true" keyProperty="schdlSn">
+        INSERT INTO schdl_info (
+            CO_ID, BIZ_ID, SCHDL_SE_CD, VAC_SE_CD, SCHDL_NM, BGNG_DT, END_DT, ALL_DAY_YN,
+            PLACE_NM, SCHDL_CN, USE_YN, REG_DT, RGTR_ID
+        ) VALUES (
+            #{coId}, #{bizId}, #{schdlSeCd}, #{vacSeCd}, #{schdlNm}, #{bgngDt}, #{endDt}, IFNULL(#{allDayYn}, 'N'),
+            #{placeNm}, #{schdlCn}, 'Y', NOW(), #{rgtrId}
+        )
+    </insert>
+
+    <update id="updateSchedule" parameterType="kr.co.TRSolution.trsIbp.schedule.vo.ScheduleVO">
+        UPDATE schdl_info
+        SET SCHDL_SE_CD = #{schdlSeCd},
+            VAC_SE_CD = #{vacSeCd},
+            BIZ_ID = #{bizId},
+            SCHDL_NM = #{schdlNm},
+            BGNG_DT = #{bgngDt},
+            END_DT = #{endDt},
+            ALL_DAY_YN = IFNULL(#{allDayYn}, 'N'),
+            PLACE_NM = #{placeNm},
+            SCHDL_CN = #{schdlCn},
+            MDFCN_DT = NOW(),
+            MDFR_ID = #{mdfrId}
+        WHERE SCHDL_SN = #{schdlSn}
+          AND CO_ID = #{coId}
+          AND USE_YN = 'Y'
+    </update>
+
+    <delete id="deleteScheduleUserRel" parameterType="kr.co.TRSolution.trsIbp.schedule.vo.ScheduleVO">
+        DELETE FROM schdl_user_rel
+        WHERE SCHDL_SN = #{schdlSn}
+    </delete>
+
+    <insert id="insertScheduleUserRel" parameterType="kr.co.TRSolution.trsIbp.schedule.vo.ScheduleVO">
+        INSERT INTO schdl_user_rel (SCHDL_SN, USER_ID, REG_DT)
+        SELECT #{schdlSn}, U.USER_ID, NOW()
+        FROM user_info U
+        WHERE U.USER_ID = #{targetUserId}
+          AND U.CO_ID = #{coId}
+          AND U.USE_YN = 'Y'
+    </insert>
+
+    <update id="deleteSchedule" parameterType="kr.co.TRSolution.trsIbp.schedule.vo.ScheduleVO">
+        UPDATE schdl_info
+        SET USE_YN = 'N',
+            MDFCN_DT = NOW(),
+            MDFR_ID = #{mdfrId}
+        WHERE SCHDL_SN = #{schdlSn}
+          AND CO_ID = #{coId}
+          AND USE_YN = 'Y'
+    </update>
+
+
+    <select id="selectScheduleConflictCount" parameterType="kr.co.TRSolution.trsIbp.schedule.vo.ScheduleVO" resultType="int">
+        SELECT COUNT(1)
+        FROM schdl_info S
+        JOIN schdl_user_rel R ON R.SCHDL_SN = S.SCHDL_SN
+        WHERE S.CO_ID = #{coId}
+          AND S.USE_YN = 'Y'
+          AND R.USER_ID = #{targetUserId}
+          <if test="schdlSn != null">
+          AND S.SCHDL_SN <![CDATA[<>]]> #{schdlSn}
+          </if>
+          /* 과거 데이터 중 시작일시와 종료일시가 역전된 일정은 충돌 판정에서 제외한다. */
+          AND S.BGNG_DT <![CDATA[<]]> S.END_DT
+          AND S.BGNG_DT <![CDATA[<]]> CAST(#{endDt} AS DATETIME)
+          AND S.END_DT <![CDATA[>]]> CAST(#{bgngDt} AS DATETIME)
+    </select>
+
+    <select id="selectScheduleConflictList" parameterType="kr.co.TRSolution.trsIbp.schedule.vo.ScheduleVO" resultMap="scheduleMap">
+        SELECT S.SCHDL_SN,
+               S.SCHDL_SE_CD,
+               C.CD_NM AS SCHDL_SE_NM,
+               S.SCHDL_NM,
+               DATE_FORMAT(S.BGNG_DT, '%Y-%m-%d %H:%i') AS BGNG_DT,
+               DATE_FORMAT(S.END_DT, '%Y-%m-%d %H:%i') AS END_DT,
+               S.ALL_DAY_YN,
+               R.USER_ID AS TARGET_USER_ID,
+               U.USER_NM AS TARGET_USER_NM
+        FROM schdl_info S
+        JOIN schdl_user_rel R ON R.SCHDL_SN = S.SCHDL_SN
+        JOIN user_info U ON U.USER_ID = R.USER_ID
+        LEFT JOIN cmn_cd C
+          ON C.CD_GROUP_ID = 'CAL_SCHDL_SE_CD'
+         AND C.CD = S.SCHDL_SE_CD
+        WHERE S.CO_ID = #{coId}
+          AND S.USE_YN = 'Y'
+          AND R.USER_ID = #{targetUserId}
+          <if test="schdlSn != null">
+          AND S.SCHDL_SN <![CDATA[<>]]> #{schdlSn}
+          </if>
+          AND S.BGNG_DT <![CDATA[<]]> S.END_DT
+          AND S.BGNG_DT <![CDATA[<]]> CAST(#{endDt} AS DATETIME)
+          AND S.END_DT <![CDATA[>]]> CAST(#{bgngDt} AS DATETIME)
+        ORDER BY S.BGNG_DT, S.SCHDL_SN
+    </select>
+
+</mapper>

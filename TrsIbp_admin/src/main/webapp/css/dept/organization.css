@@ -1,0 +1,210 @@
+.ds-org-chart-workspace { min-height: 680px; overflow: hidden; padding: 0; border-color: #24344a; background: linear-gradient(180deg,#111c2c 0,#0d1725 100%); }
+.ds-org-chart-head { min-height: 76px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; gap: 20px; border-bottom: 1px solid var(--ds-border); background: rgba(13,23,37,.76); }
+.ds-org-chart-head h2 { margin: 0 0 5px; color: #f8fafc; font-size: 16px; }
+.ds-org-chart-head p { margin: 0; color: #8493a8; font-size: 11px; }
+.ds-org-chart-tools { display: flex; align-items: center; gap: 9px; }
+.ds-org-search { width: 250px; height: 38px; padding: 0 12px; display: flex; align-items: center; gap: 9px; border: 1px solid #2b3a52; border-radius: 9px; background: #0a1322; color: #718096; }
+.ds-org-search:focus-within { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,.11); }
+.ds-org-search input { min-width: 0; flex: 1; border: 0; outline: 0; background: transparent; color: #dbeafe; font-size: 11px; }
+.ds-org-guide { min-height: 38px; padding: 9px 20px; display: flex; flex-wrap: wrap; align-items: center; gap: 18px; border-bottom: 1px solid rgba(148,163,184,.12); background: rgba(8,17,30,.46); color: #728198; font-size: 10px; }
+.ds-org-guide span { display: inline-flex; align-items: center; gap: 6px; }
+.ds-org-guide i { width: 6px; height: 6px; border-radius: 50%; background: #3b82f6; }
+.ds-org-guide b { color: #c5d2e4; }
+.ds-org-chart-scroll { height: 620px; overflow-y: auto; overflow-x: hidden; background: radial-gradient(circle at 50% -5%,rgba(45,116,210,.16),transparent 42%),linear-gradient(180deg,#0c1625,#0a1320); }
+.ds-org-chart { position: relative; width: 100%; min-width: 0; padding: 34px 28px 90px; box-sizing: border-box; }
+.ds-org-company-lines { position: absolute; inset: 0; z-index: 0; overflow: visible; pointer-events: none; }
+.ds-org-company-lines path { fill: none; stroke: #466786; stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.ds-org-root-wrap { position: relative; z-index: 2; padding-bottom: 62px; display: flex; justify-content: center; }
+.ds-org-branches { position: relative; z-index: 2; width: 100%; display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start; gap: 88px 46px; }
+.ds-org-branch { position: relative; min-width: 0; flex: 0 1 238px; max-width: 252px; display: flex; flex-direction: column; align-items: center; }
+.ds-org-chart-children { position: relative; width: 210px; margin: 22px 0 0 16px; padding-left: 18px; border-left: 1px solid #314a63; box-sizing: border-box; }
+.ds-org-chart-child { position: relative; margin: 14px 0; }
+.ds-org-chart-child > .ds-org-node-card::before { content: ""; position: absolute; top: 50%; left: -19px; width: 19px; height: 1px; background: #314a63; }
+.ds-org-chart-children.is-hidden { display: none; }
+.ds-org-node-card { --org-accent:#7693b5; --org-badge-bg:rgba(118,147,181,.13); --org-badge:#b9c9da; position: relative; width: 210px; min-height: 80px; padding: 11px 72px 21px 13px; border: 1px solid #354a63; border-left: 4px solid var(--org-accent); border-radius: 9px; background: linear-gradient(145deg,#18273a,#111c2c); box-shadow: 0 9px 24px rgba(0,0,0,.24); cursor: pointer; user-select: none; box-sizing: border-box; transition: border-color .16s,transform .16s,box-shadow .16s; }
+.ds-org-node-card:hover { border-color: var(--org-accent); transform: translateY(-2px); box-shadow: 0 12px 30px rgba(0,0,0,.3); }
+.ds-org-node-card.is-selected { box-shadow: 0 0 0 2px color-mix(in srgb,var(--org-accent) 28%,transparent),0 12px 28px rgba(0,0,0,.28); }
+.ds-org-node-company { --org-accent:#5b8ee4; --org-badge-bg:rgba(91,142,228,.16); --org-badge:#a8c8ff; background: linear-gradient(145deg,#1b3760,#142943); }
+.ds-org-node-hq { --org-accent:#27a9bd; --org-badge-bg:rgba(39,169,189,.14); --org-badge:#78dbe7; background: linear-gradient(145deg,#17384a,#112b3a); }
+.ds-org-node-dept { --org-accent:#4b91c7; --org-badge-bg:rgba(75,145,199,.14); --org-badge:#91c6ed; background: linear-gradient(145deg,#193147,#122538); }
+.ds-org-node-team { --org-accent:#8197ad; --org-badge-bg:rgba(129,151,173,.13); --org-badge:#b9c8d6; background: linear-gradient(145deg,#1b2938,#141f2d); }
+.ds-org-root-card { width: 230px; min-height: 86px; padding: 13px 15px 22px; text-align: center; }
+.ds-org-node-card strong { display: block; overflow: hidden; color: #f8fafc; font-size: 12px; font-weight: 900; text-overflow: ellipsis; white-space: nowrap; }
+.ds-org-node-card small { margin-top: 5px; display: block; overflow: hidden; color: #91a2b8; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.ds-org-type-badge { width: max-content; margin-bottom: 7px; padding: 3px 7px; display: block; border-radius: 999px; background: var(--org-badge-bg); color: var(--org-badge); font-size: 8px; line-height: 1.2; font-weight: 900; }
+.ds-org-root-card .ds-org-type-badge { margin-right: auto; margin-left: auto; }
+.ds-org-card-actions { position: absolute; top: 9px; right: 9px; display: flex; gap: 5px; }
+.ds-org-card-btn { width: 25px; height: 25px; padding: 0; display: grid; place-items: center; border: 1px solid color-mix(in srgb,var(--org-accent) 28%,transparent); border-radius: 6px; background: color-mix(in srgb,var(--org-accent) 14%,transparent); color: var(--org-badge); font-size: 11px; cursor: pointer; }
+.ds-org-card-btn:hover { background: color-mix(in srgb,var(--org-accent) 28%,transparent); color: #fff; }
+.ds-org-card-btn.is-toggle { font-size: 9px; transition: transform .16s; }
+.ds-org-card-btn.is-toggle[aria-expanded="false"] { transform: rotate(-90deg); }
+.ds-org-card-detail { position: absolute; right: 10px; bottom: 8px; padding: 0; border: 0; background: transparent; color: var(--org-badge); font-size: 9px; font-weight: 800; cursor: pointer; }
+.ds-org-card-detail:hover { color: #e0f2fe; text-decoration: underline; }
+.ds-org-detail-modal-panel { width: min(580px,calc(100vw - 32px)); padding: 0; }
+.ds-org-detail-modal-panel .ds-modal-head { margin: 0; padding: 18px 22px; border-bottom: 1px solid var(--ds-border); }
+.ds-org-detail-modal-body { max-height: calc(100vh - 220px); padding: 21px 22px; overflow-y: auto; }
+.ds-org-detail-title { padding-bottom: 16px; border-bottom: 1px solid rgba(148,163,184,.14); }
+.ds-org-detail-title h3 { margin: 8px 0 6px; color: #f8fafc; font-size: 21px; }
+.ds-org-detail-title p { margin: 0; color: #8d9bb0; font-size: 11px; line-height: 1.65; }
+.ds-org-kv { margin: 18px 0; display: grid; grid-template-columns: 92px minmax(0,1fr); gap: 12px 10px; font-size: 11px; }
+.ds-org-kv dt { color: #718096; }
+.ds-org-kv dd { margin: 0; color: #dce6f3; font-weight: 750; }
+.ds-org-member-head { margin-top: 18px; padding-top: 17px; display: flex; justify-content: space-between; border-top: 1px solid rgba(148,163,184,.14); color: #cbd5e1; font-size: 11px; font-weight: 800; }
+.ds-org-members { margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.ds-org-member { padding: 9px 10px; display: flex; align-items: center; gap: 9px; border: 1px solid #26364d; border-radius: 9px; background: #101b2d; }
+.ds-org-member-avatar { width: 30px; height: 30px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 50%; background: #203758; color: #bfdbfe; font-size: 10px; font-weight: 900; }
+.ds-org-member div { min-width: 0; flex: 1; }
+.ds-org-member strong,.ds-org-member small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ds-org-member strong { color: #e5edf8; font-size: 10px; }
+.ds-org-member small { margin-top: 2px; color: #718096; font-size: 8px; }
+.ds-org-member em { color: #67e8f9; font-size: 8px; font-style: normal; }
+.ds-org-detail-hint { margin-top: 18px; padding: 11px 12px; border: 1px solid rgba(59,130,246,.2); border-radius: 9px; background: rgba(30,64,175,.09); color: #91a6c2; font-size: 10px; line-height: 1.6; }
+.ds-org-detail-modal-foot { padding: 14px 22px; display: grid; grid-template-columns: auto 1fr auto auto; gap: 8px; border-top: 1px solid var(--ds-border); }
+@media (max-width: 820px) {
+    .ds-org-branch { flex-basis: 245px; max-width: 270px; }
+}
+@media (max-width: 560px) {
+    .ds-org-chart { padding-right: 16px; padding-left: 16px; }
+    .ds-org-branch { flex-basis: 100%; max-width: 100%; }
+}
+@media (max-width: 760px) {
+    .ds-org-chart-head { align-items: flex-start; flex-direction: column; }
+    .ds-org-chart-tools { width: 100%; }
+    .ds-org-search { min-width: 0; flex: 1; }
+    .ds-org-members { grid-template-columns: 1fr; }
+}
+
+/* 조직 관리 안내 메시지는 모달 위의 화면 중앙에 고정해 항상 보이게 한다. */
+.ds-org-toast {
+    position: fixed !important;
+    top: 50% !important;
+    right: auto !important;
+    bottom: auto !important;
+    left: 50% !important;
+    z-index: 10000 !important;
+    width: min(460px, calc(100vw - 40px));
+    max-width: none;
+    justify-content: center;
+    padding: 16px 20px;
+    border: 1px solid rgba(52, 211, 153, .38);
+    border-radius: 12px;
+    background: #0f1f2d;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, .62), 0 0 0 1px rgba(255, 255, 255, .04);
+    color: #d1fae5;
+    font-size: 13px;
+    line-height: 1.55;
+    text-align: center;
+    transform: translate(-50%, -46%) scale(.97) !important;
+}
+.ds-org-toast.is-error {
+    border-color: rgba(248, 113, 113, .48);
+    background: #2a151d;
+    color: #fecaca;
+}
+.ds-org-toast.is-show {
+    transform: translate(-50%, -50%) scale(1) !important;
+}
+
+
+/* 900px 이하에서는 가로 조직도를 세로형 접이식 계층 트리로 전환한다. */
+@media (max-width: 900px) {
+    .ds-org-chart-scroll {
+        height: auto;
+        min-height: 620px;
+        overflow-x: hidden;
+    }
+    .ds-org-chart {
+        padding: 22px 16px 70px;
+    }
+    .ds-org-company-lines {
+        display: none;
+    }
+    .ds-org-root-wrap {
+        width: 100%;
+        padding-bottom: 16px;
+        justify-content: stretch;
+    }
+    .ds-org-root-card,
+    .ds-org-branch > .ds-org-node-card {
+        width: 100%;
+    }
+    .ds-org-root-card {
+        text-align: left;
+    }
+    .ds-org-root-card .ds-org-type-badge {
+        margin-right: 0;
+        margin-left: 0;
+    }
+    .ds-org-branches {
+        width: 100%;
+        display: block;
+    }
+    .ds-org-branch {
+        width: 100%;
+        max-width: none;
+        margin: 0 0 16px;
+        align-items: stretch;
+    }
+    .ds-org-chart-children {
+        width: auto;
+        margin: 10px 0 0 28px;
+        padding-left: 20px;
+        border-left: 2px solid #2b435d;
+    }
+    .ds-org-chart-child {
+        width: 100%;
+        margin: 10px 0;
+    }
+    .ds-org-chart-child > .ds-org-node-card {
+        width: 100%;
+    }
+    .ds-org-chart-child > .ds-org-node-card::before {
+        top: 31px;
+        left: -22px;
+        width: 18px;
+        background: #2b435d;
+    }
+    .ds-org-node-card {
+        min-height: 64px;
+        padding: 10px 76px 11px 13px;
+        border-radius: 8px;
+        box-shadow: 0 5px 15px rgba(0,0,0,.2);
+        transform: none;
+    }
+    .ds-org-node-card:hover {
+        transform: none;
+    }
+    .ds-org-type-badge {
+        margin-bottom: 5px;
+        padding: 3px 7px;
+    }
+    .ds-org-node-card small {
+        margin-top: 3px;
+    }
+    .ds-org-card-actions {
+        top: 50%;
+        transform: translateY(-50%);
+    }
+    .ds-org-card-detail {
+        right: 76px;
+        bottom: 10px;
+    }
+}
+
+@media (max-width: 560px) {
+    .ds-org-chart {
+        padding-right: 10px;
+        padding-left: 10px;
+    }
+    .ds-org-chart-children {
+        margin-left: 16px;
+        padding-left: 13px;
+    }
+    .ds-org-chart-child > .ds-org-node-card::before {
+        left: -15px;
+        width: 11px;
+    }
+    .ds-org-node-card {
+        padding-right: 70px;
+    }
+}

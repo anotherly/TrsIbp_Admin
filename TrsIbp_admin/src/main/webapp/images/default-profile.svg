@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-labelledby="title desc">
+  <title id="title">기본 사용자 이미지</title>
+  <desc id="desc">사진이 등록되지 않은 사용자를 나타내는 사람 실루엣</desc>
+  <rect width="96" height="96" rx="18" fill="#1e293b"/>
+  <circle cx="48" cy="30" r="17" fill="#64748b"/>
+  <path d="M21 82c1.7-18.2 12.8-28 27-28s25.3 9.8 27 28c.3 3.3-2.2 6-5.5 6h-43c-3.3 0-5.8-2.7-5.5-6Z" fill="#64748b"/>
+  <path d="m41 57 7 8 7-8-3.5 10.5L56 88H40l4.5-20.5Z" fill="#1e293b"/>
+</svg>
