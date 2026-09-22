@@ -416,7 +416,7 @@
         <if test="sDate != null and sDate != ''">AND L.REG_DT &gt;= CONCAT(#{sDate}, ' 00:00:00')</if>
         <if test="eDate != null and eDate != ''">AND L.REG_DT &lt; DATE_ADD(CONCAT(#{eDate}, ' 00:00:00'), INTERVAL 1 DAY)</if>
         <if test="clientIpAddr != null and clientIpAddr != ''">AND L.CLIENT_IP_ADDR LIKE CONCAT('%',#{clientIpAddr},'%')</if>
-        <if test="searchValue != null and searchValue != ''">AND (U.USER_NM LIKE CONCAT('%',#{searchValue},'%') OR L.MENU_NM LIKE CONCAT('%',#{searchValue},'%') OR L.TARGET_ID LIKE CONCAT('%',#{searchValue},'%') OR L.REQUEST_URI LIKE CONCAT('%',#{searchValue},'%'))</if>
+        <if test="searchValue != null and searchValue != ''">AND (U.USER_NM LIKE CONCAT('%',#{searchValue},'%') OR L.MENU_NM LIKE CONCAT('%',#{searchValue},'%') OR L.TARGET_ID LIKE CONCAT('%',#{searchValue},'%') OR L.ACTION_CN LIKE CONCAT('%',#{searchValue},'%'))</if>
         ORDER BY L.REG_DT DESC LIMIT 1000
     </select>
     <select id="selectSystemNoticeList" parameterType="adminVO" resultType="map">
