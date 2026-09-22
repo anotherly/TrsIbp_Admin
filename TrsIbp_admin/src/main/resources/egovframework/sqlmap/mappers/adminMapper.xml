@@ -234,7 +234,7 @@
         FROM user_info U
         LEFT JOIN co_info C ON C.CO_ID = U.CO_ID
         LEFT JOIN dept_info D ON D.DEPT_ID = U.DEPT_ID
-        LEFT JOIN authrt_info A ON A.AUTHRT_ID = U.AUTHRT_ID
+        LEFT JOIN co_authrt_info A ON A.CO_ID = U.CO_ID AND A.AUTHRT_ID = U.AUTHRT_ID
         WHERE 1 = 1
         <if test="useYn != null and useYn != ''">
             AND U.USE_YN = #{useYn}
@@ -404,5 +404,31 @@
             ,NOW()
         )
     </insert>
+
+
+    <select id="selectUserActionLogList" parameterType="adminVO" resultType="map">
+        SELECT L.ACTION_LOG_SN,L.CO_ID,C.CO_NM,L.USER_ID,U.USER_NM,L.ACTION_SE_CD,L.MENU_NM,L.TARGET_ID,L.REQUEST_URI,L.CLIENT_IP_ADDR,L.ACTION_CN,L.REG_DT
+        FROM user_action_log L LEFT JOIN co_info C ON C.CO_ID=L.CO_ID LEFT JOIN user_info U ON U.USER_ID=L.USER_ID
+        WHERE 1=1
+        <if test="coId != null and coId != ''">AND L.CO_ID=#{coId}</if>
+        <if test="userId != null and userId != ''">AND L.USER_ID LIKE CONCAT('%',#{userId},'%')</if>
+        <if test="actionSeCd != null and actionSeCd != ''">AND L.ACTION_SE_CD=#{actionSeCd}</if>
+        <if test="sDate != null and sDate != ''">AND L.REG_DT &gt;= CONCAT(#{sDate}, ' 00:00:00')</if>
+        <if test="eDate != null and eDate != ''">AND L.REG_DT &lt; DATE_ADD(CONCAT(#{eDate}, ' 00:00:00'), INTERVAL 1 DAY)</if>
+        <if test="clientIpAddr != null and clientIpAddr != ''">AND L.CLIENT_IP_ADDR LIKE CONCAT('%',#{clientIpAddr},'%')</if>
+        <if test="searchValue != null and searchValue != ''">AND (U.USER_NM LIKE CONCAT('%',#{searchValue},'%') OR L.MENU_NM LIKE CONCAT('%',#{searchValue},'%') OR L.TARGET_ID LIKE CONCAT('%',#{searchValue},'%') OR L.REQUEST_URI LIKE CONCAT('%',#{searchValue},'%'))</if>
+        ORDER BY L.REG_DT DESC LIMIT 1000
+    </select>
+    <select id="selectSystemNoticeList" parameterType="adminVO" resultType="map">
+        SELECT N.NOTICE_SN,N.NOTICE_TITLE,N.NOTICE_CN,N.POPUP_YN,N.USE_YN,N.RGTR_ID,COALESCE(U.USER_NM,N.RGTR_ID) RGTR_NM,N.REG_DT
+        FROM notice_info N LEFT JOIN user_info U ON U.USER_ID=N.RGTR_ID WHERE N.NOTICE_SCOPE_CD='SYSTEM' AND N.USE_YN='Y'
+        <if test="searchValue != null and searchValue != ''">AND (N.NOTICE_TITLE LIKE CONCAT('%',#{searchValue},'%') OR N.NOTICE_CN LIKE CONCAT('%',#{searchValue},'%'))</if>
+        ORDER BY N.NOTICE_SN DESC LIMIT 300
+    </select>
+    <insert id="insertSystemNotice" parameterType="adminVO" useGeneratedKeys="true" keyProperty="noticeSn">
+        INSERT INTO notice_info(NOTICE_SCOPE_CD,CO_ID,NOTICE_TITLE,NOTICE_CN,POPUP_YN,USE_YN,REG_DT,RGTR_ID) VALUES('SYSTEM',NULL,#{noticeTitle},#{noticeCn},IFNULL(NULLIF(#{popupYn},''),'Y'),'Y',NOW(),#{adminId})
+    </insert>
+    <update id="updateSystemNotice" parameterType="adminVO">UPDATE notice_info SET NOTICE_TITLE=#{noticeTitle},NOTICE_CN=#{noticeCn},POPUP_YN=IFNULL(NULLIF(#{popupYn},''),'Y'),MDFCN_DT=NOW(),MDFR_ID=#{adminId} WHERE NOTICE_SN=#{noticeSn} AND NOTICE_SCOPE_CD='SYSTEM' AND USE_YN='Y'</update>
+    <update id="deleteSystemNotice" parameterType="adminVO">UPDATE notice_info SET USE_YN='N',MDFCN_DT=NOW(),MDFR_ID=#{adminId} WHERE NOTICE_SN=#{noticeSn} AND NOTICE_SCOPE_CD='SYSTEM' AND USE_YN='Y'</update>
 
 </mapper>

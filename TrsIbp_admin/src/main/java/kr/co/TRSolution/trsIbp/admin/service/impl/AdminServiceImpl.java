@@ -238,6 +238,31 @@ public class AdminServiceImpl extends EgovAbstractServiceImpl implements AdminSe
         }
     }
 
+    @Override
+    public List<Map<String, Object>> selectUserActionLogList(AdminVO adminVO) throws Exception { return adminMapper.selectUserActionLogList(adminVO); }
+
+    @Override
+    public List<Map<String, Object>> selectSystemNoticeList(AdminVO adminVO) throws Exception { return adminMapper.selectSystemNoticeList(adminVO); }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void saveSystemNotice(AdminVO vo, String adminId) throws Exception {
+        if (vo.getNoticeTitle() == null || vo.getNoticeTitle().trim().isEmpty()) throw new IllegalArgumentException("제목을 입력해 주세요.");
+        if (vo.getNoticeCn() == null || vo.getNoticeCn().trim().isEmpty()) throw new IllegalArgumentException("내용을 입력해 주세요.");
+        vo.setAdminId(adminId);
+        boolean insert = vo.getNoticeSn() == null || vo.getNoticeSn() == 0;
+        if (insert) adminMapper.insertSystemNotice(vo); else if (adminMapper.updateSystemNotice(vo) != 1) throw new IllegalArgumentException("수정할 시스템 공지를 찾을 수 없습니다.");
+        insertHistory(adminId, insert ? "SYSTEM_NOTICE_REG" : "SYSTEM_NOTICE_MDFCN", "SYSTEM_NOTICE", String.valueOf(vo.getNoticeSn()), "시스템 공지 저장");
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteSystemNotice(Long noticeSn, String adminId) throws Exception {
+        AdminVO vo = new AdminVO(); vo.setNoticeSn(noticeSn); vo.setAdminId(adminId);
+        if (adminMapper.deleteSystemNotice(vo) != 1) throw new IllegalArgumentException("삭제할 시스템 공지를 찾을 수 없습니다.");
+        insertHistory(adminId, "SYSTEM_NOTICE_DEL", "SYSTEM_NOTICE", String.valueOf(noticeSn), "시스템 공지 삭제");
+    }
+
     private void insertHistory(String adminId, String actionSeCd, String targetSeCd,
             String targetId, String actionCn) throws Exception {
         AdminVO history = new AdminVO();

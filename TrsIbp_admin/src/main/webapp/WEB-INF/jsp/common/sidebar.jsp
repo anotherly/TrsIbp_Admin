@@ -60,6 +60,8 @@
                class="ds-menu-item <%="/admin/actionHistoryList.do".equals(adminUri) ? "is-active" : ""%>">
                 <i class="fa-solid fa-clipboard-list w-5"></i><span>관리자 처리 이력</span>
             </a>
+            <a href="<%=adminCtx%>/admin/userActionLogList.do" class="ds-menu-item <%="/admin/userActionLogList.do".equals(adminUri) ? "is-active" : ""%>"><i class="fa-solid fa-user-clock w-5"></i><span>사용자 작업 이력</span></a>
+            <a href="<%=adminCtx%>/admin/systemNoticeList.do" class="ds-menu-item <%="/admin/systemNoticeList.do".equals(adminUri) ? "is-active" : ""%>"><i class="fa-solid fa-bullhorn w-5"></i><span>시스템 공지</span></a>
             <a href="<%=adminCtx%>/admin/operationPolicy.do"
                class="ds-menu-item <%="/admin/operationPolicy.do".equals(adminUri) ? "is-active" : ""%>">
                 <i class="fa-solid fa-sliders w-5"></i><span>공통코드·운영정책</span>

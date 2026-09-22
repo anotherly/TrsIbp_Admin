@@ -54,4 +54,10 @@ public interface AdminMapper {
     int insertAdminHistory(AdminVO adminVO) throws Exception;
 
     int insertSystemLog(AdminVO adminVO) throws Exception;
+
+    List<Map<String, Object>> selectUserActionLogList(AdminVO adminVO) throws Exception;
+    List<Map<String, Object>> selectSystemNoticeList(AdminVO adminVO) throws Exception;
+    int insertSystemNotice(AdminVO adminVO) throws Exception;
+    int updateSystemNotice(AdminVO adminVO) throws Exception;
+    int deleteSystemNotice(AdminVO adminVO) throws Exception;
 }

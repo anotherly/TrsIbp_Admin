@@ -46,4 +46,9 @@ public interface AdminService {
     void updateOperationPolicy(String policyId, String policyValue, String adminId) throws Exception;
 
     void recordSystemLog(AdminVO adminVO);
+
+    List<Map<String, Object>> selectUserActionLogList(AdminVO adminVO) throws Exception;
+    List<Map<String, Object>> selectSystemNoticeList(AdminVO adminVO) throws Exception;
+    void saveSystemNotice(AdminVO adminVO, String adminId) throws Exception;
+    void deleteSystemNotice(Long noticeSn, String adminId) throws Exception;
 }

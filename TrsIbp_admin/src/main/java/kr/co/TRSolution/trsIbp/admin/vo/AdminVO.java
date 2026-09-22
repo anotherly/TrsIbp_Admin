@@ -32,6 +32,10 @@ public class AdminVO extends BaseVO implements Serializable {
     private String cd;
     private String policyId;
     private String policyValue;
+    private Long noticeSn;
+    private String noticeTitle;
+    private String noticeCn;
+    private String popupYn;
 
     public Integer getAplySn() {
         return aplySn;
@@ -200,4 +204,13 @@ public class AdminVO extends BaseVO implements Serializable {
     public void setPolicyValue(String policyValue) {
         this.policyValue = policyValue;
     }
+    public Long getNoticeSn() { return noticeSn; }
+    public void setNoticeSn(Long noticeSn) { this.noticeSn = noticeSn; }
+    public String getNoticeTitle() { return noticeTitle; }
+    public void setNoticeTitle(String noticeTitle) { this.noticeTitle = noticeTitle; }
+    public String getNoticeCn() { return noticeCn; }
+    public void setNoticeCn(String noticeCn) { this.noticeCn = noticeCn; }
+    public String getPopupYn() { return popupYn; }
+    public void setPopupYn(String popupYn) { this.popupYn = popupYn; }
+
 }

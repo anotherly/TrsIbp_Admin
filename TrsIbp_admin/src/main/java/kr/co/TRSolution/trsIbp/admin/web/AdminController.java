@@ -214,6 +214,42 @@ public class AdminController {
         return mav;
     }
 
+    @RequestMapping(value = "/admin/userActionLogList.do", method = RequestMethod.GET)
+    public ModelAndView userActionLogList(@ModelAttribute AdminVO adminVO, HttpServletRequest request) throws Exception {
+        requireSystemAdmin(request);
+        ModelAndView mav = new ModelAndView("/admin/userActionLogList");
+        mav.addObject("list", adminService.selectUserActionLogList(adminVO));
+        mav.addObject("search", adminVO);
+        return mav;
+    }
+
+    @RequestMapping(value = "/admin/systemNoticeList.do", method = RequestMethod.GET)
+    public ModelAndView systemNoticeList(@ModelAttribute AdminVO adminVO, HttpServletRequest request) throws Exception {
+        requireSystemAdmin(request);
+        ModelAndView mav = new ModelAndView("/admin/systemNoticeList");
+        mav.addObject("list", adminService.selectSystemNoticeList(adminVO));
+        mav.addObject("search", adminVO);
+        return mav;
+    }
+
+    @RequestMapping(value = "/admin/systemNoticeSave.ajax", method = RequestMethod.POST)
+    @ResponseBody
+    public ModelAndView systemNoticeSave(@ModelAttribute AdminVO adminVO, HttpServletRequest request) {
+        ModelAndView mav = new ModelAndView("jsonView");
+        try { UserVO u=requireSystemAdmin(request); adminService.saveSystemNotice(adminVO,u.getUserId()); mav.addObject("result","OK"); }
+        catch(Exception e){ addError(mav,request,"시스템 공지 저장 실패",e); }
+        return mav;
+    }
+
+    @RequestMapping(value = "/admin/systemNoticeDelete.ajax", method = RequestMethod.POST)
+    @ResponseBody
+    public ModelAndView systemNoticeDelete(@RequestParam("noticeSn") Long noticeSn, HttpServletRequest request) {
+        ModelAndView mav = new ModelAndView("jsonView");
+        try { UserVO u=requireSystemAdmin(request); adminService.deleteSystemNotice(noticeSn,u.getUserId()); mav.addObject("result","OK"); }
+        catch(Exception e){ addError(mav,request,"시스템 공지 삭제 실패",e); }
+        return mav;
+    }
+
     @RequestMapping(value = "/admin/operationPolicy.do", method = RequestMethod.GET)
     public ModelAndView operationPolicy(@ModelAttribute AdminVO adminVO,
             HttpServletRequest request) throws Exception {
